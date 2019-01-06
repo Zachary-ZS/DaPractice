@@ -1,0 +1,164 @@
+Picture
+总时间限制: 2000ms 内存限制: 65536kB
+描述
+A number of rectangular posters, photographs and other pictures of the same shape are pasted on a wall. Their sides are all vertical or horizontal. Each rectangle can be partially or totally covered by the others. The length of the boundary of the union of all rectangles is called the perimeter.
+
+Write a program to calculate the perimeter. An example with 7 rectangles is shown in Figure 1.
+
+
+The corresponding boundary is the whole set of line segments drawn in Figure 2.
+
+
+The vertices of all rectangles have integer coordinates.
+输入
+Your program is to read from standard input. The first line contains the number of rectangles pasted on the wall. In each of the subsequent lines, one can find the integer coordinates of the lower left vertex and the upper right vertex of each rectangle. The values of those coordinates are given as ordered pairs consisting of an x-coordinate followed by a y-coordinate.
+
+0 <= number of rectangles < 5000
+All coordinates are in the range [-10000,10000] and any existing rectangle has a positive area.
+输出
+Your program is to write to standard output. The output must contain a single line with a non-negative integer which corresponds to the perimeter for the input rectangles.
+样例输入
+7
+-15 0 5 10
+-5 8 20 25
+15 -4 24 14
+0 -6 16 4
+2 15 10 22
+30 10 36 20
+34 0 40 16
+样例输出
+228
+来源
+IOI 1998
+
+Answer：
+// 最后实在是不想搞了基本上改成网上的代码了
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+#define maxn 5008
+int n;
+int y[maxn << 1] = { 0 };	// y cordinates
+
+struct Shuline {
+	int x;
+	int yl, yr;
+	int flag;
+}shul[maxn << 1];
+bool operator<(const Shuline&a, const Shuline&b) {
+	if (a.x < b.x)
+		return true;
+	if (a.x == b.x&&a.flag > b.flag)
+		return true;
+	return false;
+}
+
+// heng lines
+struct node {
+	int l, r;
+	int count;		// times of covering
+	int nums;		// 包含区间的数量
+	int length;		// length of section
+	int lcoverd, rcoverd;
+}nl[maxn * 4];
+
+void build(int k, int l, int r) {
+	nl[k].length = nl[k].nums = nl[k].count = 0;
+	nl[k].l = l;
+	nl[k].r = r;
+	if (l == r - 1)
+		return;
+	int middot = (l + r) >> 1;
+	build(k << 1, l, middot);
+	build((k << 1) + 1, middot, r);
+}
+
+void update(int k) {
+
+	if (nl[k].count > 0) {
+		nl[k].length = y[nl[k].r] - y[nl[k].l];
+		nl[k].nums = 1;
+		nl[k].lcoverd = nl[k].rcoverd = 1;
+		return;
+	}
+	if (nl[k].l == nl[k].r - 1) {
+		nl[k].length = 0;
+		nl[k].nums = 0;
+		nl[k].lcoverd = nl[k].rcoverd = 0;
+		return;
+	}
+	// update val according to sons
+	int lson = k << 1, rson = (k << 1) + 1;
+	nl[k].length = nl[lson].length + nl[rson].length;
+	nl[k].lcoverd = nl[lson].lcoverd;
+	nl[k].rcoverd = nl[rson].rcoverd;
+	nl[k].nums = nl[lson].nums + nl[rson].nums - (nl[lson].rcoverd) * (nl[rson].lcoverd);
+
+}
+
+void query(int k, int l, int r, int flag) {
+
+	if (y[nl[k].l] == l&&y[nl[k].r] == r) {
+		nl[k].count += flag;
+		update(k);
+		return;
+	}
+	int midval = y[(nl[k].l + nl[k].r) / 2];
+	if (r <= midval)
+		query(k << 1, l, r, flag);
+	else if (l >= midval)
+		query((k << 1) + 1, l, r, flag);
+	else {
+		// query and update sons
+		query(k << 1, l, midval, flag);
+		query((k << 1) + 1, midval, r, flag);
+	}
+	update(k);
+}
+
+
+int main() {
+	scanf("%d", &n);
+	int x1, x2, y1, y2, ni = 0;
+
+	for (int i = 0; i < n; i++) {
+		scanf("%d %d %d %d", &x1, &y1, &x2, &y2);
+		shul[ni].x = x1;
+		shul[ni].yl = y1;
+		shul[ni].yr = y2;
+		shul[ni].flag = 1;
+		y[ni++] = y1;
+
+		shul[ni].x = x2;
+		shul[ni].yl = y1;
+		shul[ni].yr = y2;
+		shul[ni].flag = -1;
+		y[ni++] = y2;
+	}
+	sort(shul, shul + ni);
+	sort(y, y + ni);
+	int num = unique(y, y + ni) - y;
+	build(1, 0, num - 1);
+	int zhouch = 0, tmp = 0;
+	int tmpnum = 0;
+	for (int i = 0; i < ni; i++) {
+		query(1, shul[i].yl, shul[i].yr, shul[i].flag);
+		// heng lines' length
+		if (i > 0)
+			zhouch += 2 * tmpnum*(shul[i].x - shul[i - 1].x);
+		// shulines' length
+		zhouch += abs(nl[1].length - tmp);
+		tmp = nl[1].length;
+		tmpnum = nl[1].nums;
+	}
+	printf("%d\n", zhouch);
+	return 0;
+}

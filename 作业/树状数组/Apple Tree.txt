@@ -1,0 +1,145 @@
+Apple Tree
+
+描述
+There is an apple tree outside of kaka's house. Every autumn, a lot of apples will grow in the tree. Kaka likes apple very much, so he has been carefully nurturing the big apple tree. 
+The tree has Nforks which are connected by branches. Kaka numbers the forks by 1 to Nand the root is always numbered by 1. Apples will grow on the forks and two apple won't grow on the same fork. kaka wants to know how many apples are there in a sub-tree, for his study of the produce ability of the apple tree. 
+The trouble is that a new apple may grow on an empty fork some time and kaka may pick an apple from the tree for his dessert. Can you help kaka?
+
+输入
+The first line contains an integer N (N ≤ 100,000) , which is the number of the forks in the tree.
+The following N - 1 lines each contain two integers u and v, which means fork u and fork v are connected by a branch.
+The next line contains an integer M (M ≤ 100,000).
+The following M lines each contain a message which is either
+"C x" which means the existence of the apple on fork x has been changed. i.e. if there is an apple on the fork, then Kaka pick it; otherwise a new apple has grown on the empty fork.
+or
+"Q x" which means an inquiry for the number of apples in the sub-tree above the fork x, including the apple (if exists) on the fork x
+Note the tree is full of apples at the beginning
+输出
+For every inquiry, output the correspond answer per line.
+样例输入
+3
+1 2
+1 3
+3
+Q 1
+C 2
+Q 1
+样例输出
+3
+2
+
+郭老师要求用树状数组做，先DFS为每个节点分配startTime和endTime，然后根据时间我再start时加上有一个apple，end没有。一开始DFS的时候每次从子树回到父亲节点上我会time++，但是不知道为啥一直WA，看了CSDN一个类似的做法是从子树回到父亲节点上time也不变的（我主要是觉得不同节点的endtime一样不太好，但其实并没有什么影响），于是按照这个改了一下编程TLE，巧的是博主一开始也TLE，是因为vector的构造，我们一开始是vector<int> nextto[100008]，然后报TLE，改成vector<vector<int> > nextto(100008);就AC了，不太清楚为什么（博主也不清楚:)）
+
+
+Codes:
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<queue>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+
+#define lowbit(x) (x&(-x))
+
+int N, Timing = 0;
+vector<vector<int> > nextto(100008);
+int apple[100008] = { 0 };
+int C[100008] = { 0 };
+int Sum[100008] = { 0 };
+int Start[100008] = { 0 };
+int End[100008] = { 0 };
+bool visited[100008] = { 0 };
+
+void dfs(int k) {
+	Timing++;
+	Sum[Timing] = Sum[Timing - 1] + 1;
+	visited[k] = true;
+	Start[k] = Timing;
+	apple[k] = 1;
+	for (int i = 0; i < nextto[k].size(); i++) {
+		int tmp = nextto[k].at(i);
+		if (!visited[tmp]) {
+			dfs(tmp);
+		}
+	}
+	End[k] = Timing;
+}
+/*
+void init() {
+	for (int i = 1; i <= n; i++) {
+		for (int j = i - lowbit(i) + 1; j <= i; j++) {
+			C[i] += apple[j];
+		}
+	}
+}*/
+void init() {
+	for (int i = 1; i <= N; i++) {
+		C[i] = Sum[i] - Sum[i - lowbit(i)];
+	}
+
+}
+int sum(int k) {
+	int ni = k, s = 0;
+	while (ni) {
+		s += C[ni];
+		ni -= lowbit(ni);
+	}
+	return Sum[k] = s;
+}
+// Update value of C with val:delta
+void update(int k,int delta) {
+	int ni = k;
+	apple[k] += delta;
+	while (ni <= N) {
+		C[ni] += delta;
+		ni += lowbit(ni);
+	}
+}
+
+
+int main() {
+	int br, bs, m;
+	char inst;
+	scanf("%d", &N);
+	for (int i = 1; i < N; i++) {
+		scanf("%d %d", &br, &bs);
+		nextto[br].push_back(bs);
+		nextto[bs].push_back(br);
+	}
+	dfs(1);
+	init();
+
+	scanf("%d", &m);
+	while (m--) {
+		scanf("\n%c %d", &inst, &bs);
+/*		switch (inst) {
+		case 'Q': {
+			printf("%d\n", sum(End[bs]) - sum(Start[bs] - 1)); break; }
+		case 'C': {
+			printf("nowis C\n");
+			if (apple[Start[bs]])
+				update(Start[bs], -1);
+			else
+				update(Start[bs], 1); }
+		}
+		printf("m now is:\"%d\"\n", m);
+		*/
+	//	printf("%c %d\n", inst, bs);
+		if (inst == 'Q')
+			printf("%d\n", sum(End[bs]) - sum(Start[bs] - 1));
+		else {
+			if (apple[Start[bs]])
+				update(Start[bs], -1);
+			else
+				update(Start[bs], 1);
+		}
+
+	}
+
+
+	system("pause");
+	return 0;
+}

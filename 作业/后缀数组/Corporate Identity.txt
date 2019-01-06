@@ -1,0 +1,158 @@
+Corporate Identity
+
+总时间限制: 3000ms 内存限制: 65536kB
+描述
+Beside other services, ACM helps companies to clearly state their “corporate identity”, which includes company logo but also other signs, like trademarks. One of such companies is Internet Building Masters (IBM), which has recently asked ACM for a help with their new identity. IBM do not want to change their existing logos and trademarks completely, because their customers are used to the old ones. Therefore, ACM will only change existing trademarks instead of creating new ones.
+
+After several other proposals, it was decided to take all existing trademarks and find the longest common sequence of letters that is contained in all of them. This sequence will be graphically emphasized to form a new logo. Then, the old trademarks may still be used while showing the new identity.
+
+Your task is to find such a sequence.
+
+
+
+输入
+The input contains several tasks. Each task begins with a line containing a positive integer N, the number of trademarks (2 ≤ N ≤ 4000). The number is followed by N lines, each containing one trademark. Trademarks will be composed only from lowercase letters, the length of each trademark will be at least 1 and at most 200 characters.
+
+After the last trademark, the next task begins. The last task is followed by a line containing zero.
+输出
+For each task, output a single line containing the longest string contained as a substring in all trademarks. If there are several strings of the same length, print the one that is lexicographically smallest. If there is no such non-empty string, output the words “IDENTITY LOST” instead.
+样例输入
+3
+aabbaabb
+abbababb
+bbbbbabb
+2
+xyz
+abc
+0
+样例输出
+abb
+IDENTITY LOST
+来源
+CTU Open 2007
+
+Answer：
+
+#include <iostream>
+#include <stack>
+#include <map>
+#include <list>
+#include <set>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <string.h>
+#include <string>
+#include <cstring>
+using namespace std;
+
+#define Max(a, b) a > b ? a : b
+const int MAXN = 805000;
+const int MAXM = 200;
+int wa[MAXN], wb[MAXN], wv[MAXN], Ws[MAXN], Rank[MAXN], height[MAXN], sa[MAXN], s[MAXN], part[MAXN];
+char str[201], ans[201];
+bool visited[4001];
+int m;
+int cmp(int *r, int a, int b, int l) {
+	return r[a] == r[b] && r[a + l] == r[b + l];
+}
+void BuildSA(int *r, int n, int m)
+{
+	int i, j, p, *x = wa, *y = wb, *t;
+	for (i = 0; i < m; i++)
+		Ws[i] = 0;
+	for (i = 0; i < n; i++)
+		Ws[x[i] = r[i]]++;
+	for (i = 1; i < m; i++)
+		Ws[i] += Ws[i - 1];
+	for (i = n - 1; i >= 0; i--)
+		sa[--Ws[x[i]]] = i;
+	for (j = 1, p = 1; p < n; j *= 2, m = p){
+		for (p = 0, i = n - j; i < n; i++)
+			y[p++] = i;
+		for (i = 0; i < n; i++)
+			if (sa[i] >= j)
+				y[p++] = sa[i] - j;
+		for (i = 0; i < n; i++)
+			wv[i] = x[y[i]];
+		for (i = 0; i < m; i++)
+			Ws[i] = 0;
+		for (i = 0; i < n; i++)
+			Ws[wv[i]]++;
+		for (i = 1; i < m; i++)
+			Ws[i] += Ws[i - 1];
+		for (i = n - 1; i >= 0; i--)
+			sa[--Ws[wv[i]]] = y[i];
+		for (t = x, x = y, y = t, p = 1, x[sa[0]] = 0, i = 1; i < n; i++)
+			x[sa[i]] = cmp(y, sa[i - 1], sa[i], j) ? p - 1 : p++;
+	}
+	return;
+}
+
+void Buildheight(int *r, int n){
+	int i, j, k = 0;
+	for (i = 1; i <= n; i++)
+		Rank[sa[i]] = i;
+	for (i = 0; i < n; height[Rank[i++]] = k)
+		for (k ? k-- : 0, j = sa[Rank[i] - 1]; r[i + k] == r[j + k]; k++);
+}
+
+bool OKotNOT(int mid, int len){
+	int count = 0;
+	memset(visited, false, sizeof(visited));
+	for (int i = 2; i <= len; i++){
+		if (height[i] < mid){
+			memset(visited, false, sizeof(visited));
+			count = 0;
+			continue;
+		}
+		if (!visited[part[sa[i - 1]]])
+			visited[part[sa[i - 1]]] = true, count++;
+		if (!visited[part[sa[i]]])
+			visited[part[sa[i]]] = true, count++;
+		if (count == m){
+			for (int j = 0; j < mid; j++)
+				ans[j] = s[sa[i] + j] + 'a' - 1;
+			ans[mid] = '\0';
+			return 1;
+		}
+	}
+	return 0;
+}
+int main(){
+
+	int n, i, j, temp, resnum;
+	while (~scanf("%d", &m) && m){
+
+		n = 0, temp = 30, resnum = 0;
+		for (i = 1; i <= m; i++){
+			scanf("%s", str);
+			for (j = 0; j < strlen(str); j++){
+				part[n] = i;
+				s[n++] = str[j] - 'a' + 1;
+			}
+			part[n] = temp;
+			s[n++] = temp++;
+		}
+		s[n] = 0;
+		BuildSA(s, n + 1, temp);
+		Buildheight(s, n);
+		int lp = 0, rp = strlen(str), mid;
+		while (rp >= lp){
+			mid = (rp + lp) / 2;
+			if (OKotNOT(mid, n)){
+				lp = mid + 1;
+				resnum = mid;
+			}
+			else
+				rp = mid - 1;
+		}
+		if (resnum)
+			printf("%s\n", ans);
+		else
+			printf("IDENTITY LOST\n");
+	}
+	return 0;
+}

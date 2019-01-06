@@ -1,0 +1,138 @@
+Long Long Message
+
+总时间限制: 4000ms 单个测试点时间限制: 1000ms 内存限制: 65536kB
+描述
+The little cat is majoring in physics in the capital of Byterland. A piece of sad news comes to him these days: his mother is getting ill. Being worried about spending so much on railway tickets (Byterland is such a big country, and he has to spend 16 shours on train to his hometown), he decided only to send SMS with his mother. 
+
+The little cat lives in an unrich family, so he frequently comes to the mobile service center, to check how much money he has spent on SMS. Yesterday, the computer of service center was broken, and printed two very long messages. The brilliant little cat soon found out: 
+
+1. All characters in messages are lowercase Latin letters, without punctuations and spaces. 
+2. All SMS has been appended to each other – (i+1)-th SMS comes directly after the i-th one – that is why those two messages are quite long. 
+3. His own SMS has been appended together, but possibly a great many redundancy characters appear leftwards and rightwards due to the broken computer. 
+E.g: if his SMS is “motheriloveyou”, either long message printed by that machine, would possibly be one of “hahamotheriloveyou”, “motheriloveyoureally”, “motheriloveyouornot”, “bbbmotheriloveyouaaa”, etc. 
+4. For these broken issues, the little cat has printed his original text twice (so there appears two very long messages). Even though the original text remains the same in two printed messages, the redundancy characters on both sides would be possibly different. 
+
+You are given those two very long messages, and you have to output the length of the longest possible original text written by the little cat. 
+
+Background: 
+The SMS in Byterland mobile service are charging in dollars-per-byte. That is why the little cat is worrying about how long could the longest original text be. 
+
+Why ask you to write a program? There are four resions: 
+1. The little cat is so busy these days with physics lessons; 
+2. The little cat wants to keep what he said to his mother seceret; 
+3. POJ is such a great Online Judge; 
+4. The little cat wants to earn some money from POJ, and try to persuade his mother to see the doctor :( 
+
+输入
+Two strings with lowercase letters on two of the input lines individually. Number of characters in each one will never exceed 100000.
+输出
+A single line with a single integer number – what is the maximum length of the original text written by the little cat.
+样例输入
+yeshowmuchiloveyoumydearmotherreallyicannotbelieveit
+yeaphowmuchiloveyoumydearmother
+样例输出
+27
+来源
+POJ Monthly--2006.03.26,Zeyuan Zhu,"Dedicate to my great beloved mother."
+
+Answer：
+
+#include <iostream>
+#include <stack>
+#include <map>
+#include <list>
+#include <set>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <string.h>
+#include <string>
+#include <cstring>
+using namespace std;
+
+#define inf 0x3f3f3f3f
+
+const int MAXN = 200020;
+const int MAXM = 200;
+int wa[MAXN], wb[MAXN], wv[MAXN], Ws[MAXN]; //辅助数组
+int sa[MAXN];								//sa[i]是名次为i的后缀的位置
+int Rank[MAXN];
+int height[MAXN];							//height表示相邻名次i、i-1后缀的LCPL
+
+void BuildSA(const char *s, int sa[], int n, int m) {
+
+	int i, j, p, *pm = wa, *k2sa = wb, *t;
+	for (i = 0; i < m; i++) 	Ws[i] = 0;
+	for (i = 0; i < n; i++)		Ws[pm[i] = s[i]]++;
+	for (i = 1; i < m; i++)		Ws[i] += Ws[i - 1];
+	for (i = n - 1; i >= 0; i--)	sa[--Ws[pm[i]]] = i;
+
+	for (j = p = 1; p < n; j <<= 1, m = p) {
+		for (p = 0, i = n - j; i < n; i++)
+			k2sa[p++] = i;
+		for (i = 0; i < n; i++)
+			if (sa[i] >= j)
+				k2sa[p++] = sa[i] - j;
+		for (i = 0; i < m; i++)
+			Ws[i] = 0;
+		for (i = 0; i < n; i++)
+			Ws[wv[i] = pm[k2sa[i]]]++;
+		for (i = 1; i < m; i++)
+			Ws[i] += Ws[i - 1];
+		for (i = n - 1; i >= 0; i--)
+			sa[--Ws[wv[i]]] = k2sa[i];
+		for (t = pm, pm = k2sa, k2sa = t, pm[sa[0]] = 0, p = i = 1; i < n; i++) {
+			int a = sa[i - 1], b = sa[i];
+			if (k2sa[a] == k2sa[b] /*&& a + j < n && b + j < n */ && k2sa[a + j] == k2sa[b + j])
+				pm[sa[i]] = p - 1;
+			else
+				pm[sa[i]] = p++;
+		}
+	}
+	return;
+}
+
+void BuildHeight(char * str, int n, int * sa, int * Rank) {
+	height[0] = 0;
+	int i, j, k;
+	for (int i = 0; i < n; ++i) //i 是名次,n是字符串长度
+		Rank[sa[i]] = i;
+	for (i = k = 0; i < n - 1; height[Rank[i++]] = k)//i是位置
+		for (k ? k-- : 0, j = sa[Rank[i] - 1];		 //Rank[0]>0才不越界
+			str[i + k] == str[j + k]; k++)
+			;
+	//k相当于是 H[i]; height[Rank[i]] = H[i] ;
+}
+
+
+
+int main()
+{
+
+	char t[MAXN], t2[MAXN];
+	scanf("%s%s", t, t2);
+	int len = strlen(t);
+	int len1 = len;
+	t[len++] = '-';
+	for (int i = 0; t2[i]; i++)
+		t[len++] = t2[i];
+	t[len++] = '\0';
+	BuildSA(t, sa, len, MAXM);
+	for (int i = 0; i < len; i++)
+		Rank[sa[i]] = i;
+	BuildHeight(t, len - 1, sa, Rank);
+
+	int maxnum = 0;
+	for (int i = 1; i < len; i++) {
+		if (height[i] <= maxnum)
+			continue;
+		if (sa[i] < len1 && sa[i - 1] > len1)
+			maxnum = height[i];
+		if (sa[i - 1] < len1 && sa[i] > len1)
+			maxnum = height[i];
+	}
+	printf("%d\n", maxnum);
+	return 0;
+}

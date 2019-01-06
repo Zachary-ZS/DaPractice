@@ -1,0 +1,102 @@
+Currency Exchange
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+Several currency exchange points are working in our city. Let us suppose that each point specializes in two particular currencies and performs exchange operations only with these currencies. There can be several points specializing in the same pair of currencies. Each point has its own exchange rates, exchange rate of A to B is the quantity of B you get for 1A. Also each exchange point has some commission, the sum you have to pay for your exchange operation. Commission is always collected in source currency.
+For example, if you want to exchange 100 US Dollars into Russian Rubles at the exchange point, where the exchange rate is 29.75, and the commission is 0.39 you will get (100 - 0.39) * 29.75 = 2963.3975RUR. 
+You surely know that there are N different currencies you can deal with in our city. Let us assign unique integer number from 1 to N to each currency. Then each exchange point can be described with 6 numbers: integer A and B - numbers of currencies it exchanges, and real RAB, CAB, RBA and CBA - exchange rates and commissions when exchanging A to B and B to A respectively.
+Nick has some money in currency S and wonders if he can somehow, after some exchange operations, increase his capital. Of course, he wants to have his money in currency S in the end. Help him to answer this difficult question. Nick must always have non-negative sum of money while making his operations.
+输入
+The first line of the input contains four numbers: N - the number of currencies, M - the number of exchange points, S - the number of currency Nick has and V - the quantity of currency units he has. The following M lines contain 6 numbers each - the description of the corresponding exchange point - in specified above order. Numbers are separated by one or more spaces. 1<=S<=N<=100, 1<=M<=100, V is real number, 0<=V<=103.
+For each point exchange rates and commissions are real, given with at most two digits after the decimal point, 10-2<=rate<=102, 0<=commission<=102.
+Let us call some sequence of the exchange operations simple if no exchange point is used more than once in this sequence. You may assume that ratio of the numeric values of the sums at the end and at the beginning of any simple sequence of the exchange operations will be less than 104.
+输出
+If Nick can increase his wealth, output YES, in other case output NO to the output file.
+样例输入
+3 2 1 20.0
+1 2 1.00 1.00 1.00 1.00
+2 3 1.10 1.00 1.10 1.00
+样例输出
+YES
+来源
+Northeastern Europe 2001, Northern Subregion
+
+Answer：
+// 相当于一个变式的权值的有向图最短（长）路径，就用SPFA算法即可（套郭老师模板直接出）
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<set>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+#include<cstring>
+using namespace std;
+
+#define INF 0x7fffffff
+#define maxn 104
+#define maxm 104
+
+int n, m, s;
+double vst;
+struct Edge {
+	int e;
+	double rate;
+	double cost;
+	Edge(int ee = 0, double r = 0, double c = 0) : e(ee), rate(r), cost(c) { }
+};
+vector<Edge> G[maxn]; //整个有向图
+
+int updateTimes[maxn]; //最短路的改进次数
+
+double dist[maxn]; //dist[i]是源到i的目前最大权值路长度
+bool Spfa(int v) {
+	for( int i = 1; i <= n; ++i)
+		dist[i] = 0;
+	dist[v] = vst;
+	queue<int> que;  que.push(v);
+	memset(updateTimes ,0,sizeof(updateTimes));
+	while( !que.empty()) {
+		int s = que.front();
+		que.pop();
+		for( int i = 0;i < G[s].size(); ++i) {
+			int e = G[s][i].e;
+			double tmp = (dist[s] - G[s][i].cost) * G[s][i].rate;
+			if( dist[e] < tmp) {
+				dist[e] = tmp;
+				if(dist[v] > vst)
+					return true;
+				que.push(e); //没判队列里是否已经有e,可能会慢一些
+				++updateTimes[e];
+				if( updateTimes[e] >= n) return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+
+int main() {
+
+	scanf("%d %d %d %lf", &n, &m, &s, &vst);
+	int ta, tb;
+	double rab, cab, rba, cba;
+	for (int i = 0; i < m ; i++){
+		scanf("%d %d %lf %lf %lf %lf", &ta, &tb, &rab, &cab, &rba, &cba);
+		G[ta].push_back(Edge(tb, rab, cab));
+		G[tb].push_back(Edge(ta, rba, cba));
+	}
+	if(Spfa(s))
+		printf("YES\n");
+	else
+		printf("NO\n");
+	
+
+	system("pause");
+	return 0;
+}

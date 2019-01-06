@@ -1,0 +1,182 @@
+Going from u to v or from v to u?
+
+总时间限制: 2000ms 内存限制: 65536kB
+描述
+In order to make their sons brave, Jiajia and Wind take them to a big cave. The cave has n rooms, and one-way corridors connecting some rooms. Each time, Wind choose two rooms x and y, and ask one of their little sons go from one to the other. The son can either go from x to y, or from y to x. Wind promised that her tasks are all possible, but she actually doesn't know how to decide if a task is possible. To make her life easier, Jiajia decided to choose a cave in which every pair of rooms is a possible task. Given a cave, can you tell Jiajia whether Wind can randomly choose two rooms without worrying about anything?
+
+输入
+The first line contains a single integer T, the number of test cases. And followed T cases.
+
+The first line for each case contains two integers n, m(0 < n < 1001,m < 6000), the number of rooms and corridors in the cave. The next m lines each contains two integers u and v, indicating that there is a corridor connecting room u and room v directly.
+输出
+The output should contain T lines. Write 'Yes' if the cave has the property stated above, or 'No' otherwise.
+样例输入
+1
+3 3
+1 2
+2 3
+3 1
+样例输出
+Yes
+
+Answer:
+// WA了一堆又RE了一堆。怎么判断是不联通的要想清楚，一开始觉得不需要拓扑排序，后来发现想错了。
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<set>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+
+#define maxn 1010
+#define maxm 6010
+int n, m;
+
+int tim = 0;
+int dfn[maxn] = { 0 };
+int low[maxn] = { 0 };
+int visited[maxn] = { 0 };
+int clas[maxn] = { 0 };
+int clasnum = 0;
+vector<int> G[maxn];
+stack<int> Stack;
+
+void tarjan(int rt) {
+	visited[rt] = 1;
+	dfn[rt] = low[rt] = ++tim;
+	Stack.push(rt);
+	for (int i = 0; i < G[rt].size(); i++) {
+		int tmp = G[rt][i];
+		if (!visited[tmp]) {
+ 			tarjan(tmp);
+			low[rt] = min(low[rt], low[tmp]);
+		}
+		else if (visited[tmp] == 1)
+			low[rt] = min(low[rt], dfn[tmp]);
+		
+	}
+	if (dfn[rt] == low[rt]) {
+		clasnum++;
+		int tmp = Stack.top();
+		Stack.pop();
+		visited[tmp] = 2;
+		clas[tmp] = clasnum;
+		while (tmp != rt) {
+			tmp = Stack.top();
+			Stack.pop();
+			visited[tmp] = 2;
+			clas[tmp] = clasnum;
+		}
+
+	}
+
+
+}
+
+
+void newdag() {
+	if (clasnum == 1) {
+		printf("Yes\n");
+		return;
+	}
+	vector<set<int> >ng(clasnum + 1);
+	int ru[maxn] = { 0 };
+	for (int i = 1; i <= n; i++)
+		for (int j = 0; j < G[i].size(); j++)
+			if (clas[i] != clas[G[i][j]])
+
+				if (ng[clas[i]].find(clas[G[i][j]]) == ng[clas[i]].end()) {
+					ng[clas[i]].insert(clas[G[i][j]]);
+					ru[clas[G[i][j]]]++;
+				}
+	/*
+	int num_o = 0;
+	for (int i = 1; i <= clasnum; i++) {
+
+		if (ng[i].size() >= 2) {
+			printf("No\n");
+			return;
+		}
+		if (ng[i].size() == 0) {
+			num_o++;
+			if (num_o >= 2) {
+				printf("No\n");
+				return;
+			}
+		}
+	}
+	if (num_o == 0) {
+		printf("No\n");
+		return;
+	}*/
+	//topo
+	queue<int> q;
+	int cnt = 0;
+	for (int i = 1; i <= clasnum; i++) {
+		if (!ru[i]) {
+			cnt++;
+			q.push(i);
+		}
+	}
+	if (cnt > 1) {
+		printf("No\n");
+		return;
+	}
+	while (!q.empty()) {
+		int tm = q.front();
+		q.pop();
+		cnt = 0;
+		for (set<int>::iterator pi = ng[tm].begin(); pi != ng[tm].end(); pi++) {
+			int ty = *pi;
+			ru[ty]--;
+			if (!ru[ty]) {
+				cnt++;
+				q.push(ty);
+			}
+		}
+		if (cnt > 1) {
+			printf("No\n");
+			return;
+		}
+	}
+	printf("Yes\n");
+
+}
+
+int main() {
+	int cases;
+	scanf("%d", &cases);
+	while (cases--) {
+		for (int i = 0; i < maxn; i++)
+			G[i].clear();
+		memset(dfn, 0, sizeof(dfn));
+		while (!Stack.empty())
+			Stack.pop();
+		//memset(&Stack, 0, sizeof(Stack));
+		memset(visited, 0, sizeof(visited));
+		memset(low, 0, sizeof(low));
+		memset(clas, 0, sizeof(clas));
+		clasnum = 0;
+		tim = 0;
+		//memset(&ng, 0, sizeof(ng));
+
+		scanf("%d %d", &n, &m);
+		int ta, tb;
+		while (m--) {
+			scanf("%d %d", &ta, &tb);
+			G[ta].push_back(tb);
+		}
+		for (int i = 1; i <= n; i++)
+			if (!visited[i])
+				tarjan(i);
+		newdag();
+	}
+	return 0;
+}

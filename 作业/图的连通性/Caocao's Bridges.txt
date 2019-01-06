@@ -1,0 +1,125 @@
+Caocao's Bridges
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+Caocao was defeated by Zhuge Liang and ZhouYu in the battle of Chibi. But he wouldn't give up. Caocao's army still was not good at water battles, so he came up with another idea. He built many islands in the Changjiang river, and based on those islands, Caocao's army could easily attack Zhou Yu's troop. Caocao also built bridges connecting islands. If all islands were connected by bridges, Caocao's army could be deployed very conveniently among those islands. Zhou Yu couldn't stand with that, so he wanted to destroy some Caocao's bridges so one or more islands would be seperated from otherislands. But Zhou Yu had only one bomb which was left by Zhuge Liang, so hecould only destroy one bridge. Zhou Yu must send someone carrying the bomb to destroythe bridge. There might be guards on bridges. The soldier number of the bombing team couldn't be less than the guard number of a bridge, or the mission would fail. Please figure out as least how many soldiers Zhou Yu have to sent to complete the island seperating mission.
+
+
+
+输入
+There are no more than 12 test cases.
+
+In each test case:
+
+The first line contains two integers, N and M, meaning that there are N islands and M bridges. All the islands are numbered from 1 to N. ( 2 <= N <= 1000, 0 < M <= N^2 )
+
+Next M lines describes M bridges. Each line contains three integers U,V and W, meaning that there is a bridge connecting island U and island V, and there are W guards on that bridge. ( U ≠ V and 0 <= W <= 10,000 )
+
+The input ends with N = 0 and M = 0.
+输出
+For each test case, print the minimum soldier number Zhou Yu had to send to complete the mission. If Zhou Yu couldn't succeed any way, print -1 instead.
+样例输入
+3 3
+1 2 7
+2 3 4
+3 1 4
+3 2
+1 2 7
+2 3 4
+0 0
+
+样例输出
+-1
+4
+来源
+Guo Wei
+
+Answer：
+
+// 无向图找桥的一个题。
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<set>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+
+#define inf 0x7fffffff
+#define maxn 1010
+#define maxm 1000010
+struct Edge {
+	int to, w, id;
+	Edge(int t = 0, int wi = 0, int idt = 0) :to(t), w(wi), id(idt) {}
+};
+vector<Edge>G[maxn];
+
+int n, m;
+int tim = 0;
+int dfn[maxn] = { 0 };
+int low[maxn] = { 0 };
+int visited[maxn] = { 0 };
+int res = inf;
+
+void tarjan(int rt,int eid) {
+	visited[rt] = 1;
+	dfn[rt] = low[rt] = ++tim;
+	
+	for (int i = 0; i < G[rt].size(); i++) {
+		int nt = G[rt][i].to, id = G[rt][i].id;
+		if (id == eid)
+			continue;
+
+		if (!visited[nt]) {
+			tarjan(nt, id);
+			low[rt] = min(low[rt], low[nt]);
+			if (low[nt] > dfn[rt])
+				res = min(res, G[rt][i].w);
+		}
+		else
+			low[rt] = min(low[rt], dfn[nt]);
+		
+	}
+}
+
+
+int main() {
+	
+	while ((scanf("%d %d", &n, &m) != EOF)&&n&&m) {
+		//init
+		for (int i = 0; i < maxn; i++)
+			G[i].clear();
+		memset(dfn, 0, sizeof(dfn));
+		memset(visited, 0, sizeof(visited));
+		memset(low, 0, sizeof(low));
+		tim = 0;
+		res = inf;
+
+		int ta, tb, tw;
+		for (int i = 1; i <= m; i++) {
+			scanf("%d %d %d", &ta, &tb, &tw);
+			G[ta].push_back(Edge(tb, tw, i));
+			G[tb].push_back(Edge(ta, tw, i));
+		}
+		int ltfz = 0;
+		for (int i = 1; i <= n; i++)
+			if (!visited[i]) {
+				ltfz++;
+				tarjan(i, -1);
+			}
+		if (ltfz > 1)
+			res = 0;
+		else if (res == inf)
+			res = -1;
+		else if (res == 0)
+			res = 1;
+		printf("%d\n", res);
+	}
+
+	return 0;
+}

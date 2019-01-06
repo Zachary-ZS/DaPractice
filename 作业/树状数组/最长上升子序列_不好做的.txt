@@ -1,0 +1,98 @@
+最长上升子序列
+
+总时间限制: 1000ms 内存限制: 65536kB 
+描述
+一个数的序列bi，当b1 < b2 < ... < bS的时候，我们称这个序列是上升的。对于给定的一个序列(a1, a2, ..., aN)，我们可以得到一些上升的子序列(ai1, ai2, ..., aiK)，这里1 <= i1 < i2 < ... < iK <= N。比如，对于序列(1, 7, 3, 5, 9, 4, 8)，有它的一些上升子序列，如(1, 7), (3, 4, 8)等等。这些子序列中最长的长度是4，比如子序列(1, 3, 5, 8).
+
+你的任务，就是对于给定的序列，求出最长上升子序列的长度。
+输入
+输入的第一行是序列的长度N (1 <= N <= 300000)。第二行给出序列中的N个整数，这些整数的取值范围都在0到100000000之间。
+输出
+最长上升子序列的长度。
+样例输入
+7
+1 7 3 5 9 4 8
+样例输出
+4
+
+标注不好做的是因为比以前的题目把数据范围扩大了
+这里用树状数组做的，按照讲义上的方法。
+
+Codes:
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+
+#define lowbit(x) (x&(-x))
+
+int N;
+int number[300004] = { 0 };
+int lis[300004] = { 0 };
+int C[300004] = { 0 };
+struct tr {
+	int val;
+	int pos;
+	tr(int v = -1, int p = -1) :val(v), pos(p) { }
+};
+list<tr> n;
+
+bool operator< (const tr&a, const tr&b) {
+	if (a.pos != b.pos)
+		return a.val < b.val;
+	else
+		return a.pos > b.pos;
+}
+
+int query(int k) {
+	int ni = k, s = 0;
+	while (ni) {
+		if (s < C[ni])
+			s = C[ni];
+		ni -= lowbit(ni);
+	}
+	return s;
+}
+
+void update(int k) {
+	int ni = k;
+	while (ni <= N) {
+		if (C[ni] < lis[k])
+			C[ni] = lis[k];
+		ni += lowbit(ni);
+	}
+}
+
+
+int main() {
+
+	scanf("%d", &N);
+	for (int i = 1; i <= N; i++) {
+		scanf("%d", &number[i]);
+		n.push_front(tr(number[i], i));
+	}
+	n.sort();
+	list<tr>::iterator pi = n.begin();
+	for (; pi != n.end(); pi++) {
+		int tmp = pi->pos;
+		lis[tmp] = query(tmp - 1) + 1;
+		update(tmp);
+	}
+
+	int amx = 0;
+	for (int i = 1; i <= N; i++) {
+		if (C[i] > amx)
+			amx = C[i];
+	}
+	printf("%d\n", amx);
+
+
+	system("pause");
+	return 0;
+}

@@ -1,0 +1,257 @@
+ACM Computer Factory
+描述
+As you know, all the computers used for ACM contests must be identical, so the participants compete on equal terms. That is why all these computers are historically produced at the same factory.
+
+Every ACM computer consists of P parts. When all these parts are present, the computer is ready and can be shipped to one of the numerous ACM contests.
+
+Computer manufacturing is fully automated by using Nvarious machines. Each machine removes some parts from a half-finished computer and adds some new parts (removing of parts is sometimes necessary as the parts cannot be added to a computer in arbitrary order). Each machine is described by its performance (measured in computers per hour), input and output specification.
+
+Input specification describes which parts must be present in a half-finished computer for the machine to be able to operate on it. The specification is a set of Pnumbers 0, 1 or 2 (one number for each part), where 0 means that corresponding part must not be present, 1 — the part is required, 2 — presence of the part doesn't matter.
+
+Output specification describes the result of the operation, and is a set of Pnumbers 0 or 1, where 0 means that the part is absent, 1 — the part is present.
+
+The machines are connected by very fast production lines so that delivery time is negligibly small compared to production time.
+
+After many years of operation the overall performance of the ACM Computer Factory became insufficient for satisfying the growing contest needs. That is why ACM directorate decided to upgrade the factory.
+
+As different machines were installed in different time periods, they were often not optimally connected to the existing factory machines. It was noted that the easiest way to upgrade the factory is to rearrange production lines. ACM directorate decided to entrust you with solving this problem.
+
+输入
+Input file contains integers P N, then N descriptions of the machines. The description of ith machine is represented as by 2 P + 1 integers Qi Si,1 Si,2...Si,P Di,1 Di,2...Di,P, where Qi specifies performance, Si,j — input specification for part j, Di,k — output specification for part k.
+
+Constraints
+
+1 ≤ P ≤ 10, 1 ≤ N ≤ 50, 1 ≤ Qi ≤ 10000
+
+输出
+Output the maximum possible overall performance, then M — number of connections that must be made, then M descriptions of the connections. Each connection between machines A and B must be described by three positive numbers A B W, where W is the number of computers delivered from A to B per hour.
+
+If several solutions exist, output any of them.
+
+样例输入
+Sample input 1
+3 4
+15  0 0 0  0 1 0
+10  0 0 0  0 1 1
+30  0 1 2  1 1 1
+3   0 2 1  1 1 1
+Sample input 2
+3 5
+5   0 0 0  0 1 0
+100 0 1 0  1 0 1
+3   0 1 0  1 1 0
+1   1 0 1  1 1 0
+300 1 1 2  1 1 1
+Sample input 3
+2 2
+100  0 0  1 0
+200  0 1  1 1
+样例输出
+Sample output 1
+25 2
+1 3 15
+2 3 10
+Sample output 2
+4 5
+1 3 3
+3 5 3
+1 2 1
+2 4 1
+4 5 1
+Sample output 3
+0 0
+提示
+Bold texts appearing in the sample sections are informative and do not form part of the actual data.
+来源
+Northeastern Europe 2005, Far-Eastern Subregion
+
+Answer：
+
+// 利用郭老师的模板以及网络上的建图过程写的
+// 留下了比较详细的注释。这题主要是题意有点难读懂
+
+#include <iostream>
+#include <stack>
+#include <map>
+#include <list>
+#include <set>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <string.h>
+#include <string>
+#include <cstring>
+using namespace std;
+
+#define inf 0x7fffffff
+#define maxp 12
+#define maxn 54
+#define maxm 10010
+int G[2*maxn][2*maxn];
+int score[maxn];
+int in[maxn][maxn],out[maxn][maxn];
+bool Visited[maxn];
+int Layer[maxn]; //Layer[i]是节点i的层号
+int n, mt, p;	//0是源点， mt是汇点
+
+bool CountLayer(){ //分层
+	int layer = 0;
+	deque<int> q;
+	memset(Layer, 0xff, sizeof(Layer)); //都初始化成-1
+	Layer[0] = 0;
+	q.push_back(0);
+	while (!q.empty())
+	{
+		int v = q.front();
+		q.pop_front();
+		for (int j = 0; j <= mt; j++)
+		{
+			if (G[v][j] > 0 && Layer[j] == -1)
+			{
+				//Layer[j] == -1 说明j还没有访问过
+				Layer[j] = Layer[v] + 1;
+				if (j == mt)
+					return true; //分层到汇点即可
+				else
+					q.push_back(j);
+			}
+		}
+	}
+	return false;
+}
+
+int Dinic(){
+	int i;
+	int s;
+	int nMaxFlow = 0;
+	deque<int> q; //DFS用的栈
+	while (CountLayer())
+	{					//只要能分层
+		q.push_back(0); //源点入栈
+		memset(Visited, 0, sizeof(Visited));
+		Visited[0] = 1;
+		while (!q.empty())
+		{
+			int nd = q.back();
+			if (nd == mt)
+			{ // nd是汇点
+				//在栈中找容量最小边
+				int nMinC = inf;
+				int nMinC_vs; //容量最小边的起点
+				for (i = 1; i < q.size(); i++)
+				{
+					int vs = q[i - 1];
+					int ve = q[i];
+					if (G[vs][ve] > 0)
+					{
+						if (nMinC > G[vs][ve])
+						{
+							nMinC = G[vs][ve];
+							nMinC_vs = vs;
+						}
+					}
+				}
+				//增广，改图
+				nMaxFlow += nMinC;
+				for (i = 1; i < q.size(); i++)
+				{
+					int vs = q[i - 1];
+					int ve = q[i];
+					G[vs][ve] -= nMinC; //修改边容量
+					G[ve][vs] += nMinC; //添加反向边
+				}
+				//退栈到 nMinC_vs成为栈顶，以便继续dfs
+				while (!q.empty() && q.back() != nMinC_vs)
+				{
+					Visited[q.back()] = 0;
+					q.pop_back();
+				}
+			}
+			else
+			{ //nd不是汇点
+				for (i = 0; i <= mt; i++)
+				{
+					if (G[nd][i] > 0 && Layer[i] == Layer[nd] + 1 &&
+						!Visited[i])
+					{
+						//只往下一层的没有走过的节点走
+						Visited[i] = 1;
+						q.push_back(i);
+						break;
+					}
+				}
+
+				if (i > mt)		  //找不到下一个点
+					q.pop_back(); //回溯
+			}
+		}
+	}
+	return nMaxFlow;
+}
+
+
+int main()
+{
+	while(scanf("%d%d", &p, &n) != EOF){
+		memset(G, 0, sizeof(G));
+		memset(in, 0, sizeof(in));
+		memset(out, 0, sizeof(out));
+		memset(score, 0, sizeof(score));
+		mt = 2 * n + 1;
+		for (int i = 1; i <= n; i++){
+			scanf("%d", &score[i]);
+			G[i][i + n] = score[i];	//拆点，每个机器拆成输入点i和输出点i+n
+									//输入点和输出点连边，权值为这台机器的performance，即Qi
+			bool noin = true, nout = true;
+			for (int j = 0; j < p; j++){
+				scanf("%d", &in[i][j]);
+				if(in[i][j] == 1)
+					noin = false;
+			}
+
+			for (int j = 0; j < p; j++){
+				scanf("%d", &out[i][j]);
+				if (out[i][j] == 0)
+					nout = false;
+			}
+			if (noin)			//如果机器的输入中没有1存在，则与源点连边，边权为INF
+				G[0][i] = inf;
+			if (nout)			//如果机器的输出中只有1存在，则与汇点连边，边权为INF
+				G[i + n][mt] = inf;
+		}
+		for (int i = 1; i <= n; i++)
+			for (int j = 1; j <= n; j++){
+				if (i == j)
+					continue;
+				bool manzu = true;
+				for (int k = 0; k < p; k++){
+					if (out[i][k] + in[j][k] == 1){
+						manzu = false;
+						break;
+					}
+				}
+				if(manzu)		//如果一台机器的输出满足另一台机器的输入，则两天机器连边，边权为INF
+					G[i + n][j] = inf;
+			}
+		printf("%d ", Dinic());
+		int numline = 0;
+		int res[2*maxn] = {0}, red[2*maxn] = {0}, rew[2*maxn] = {0};
+		for (int i = 1; i <= n; i++)	//在除了源点和汇点所在的边内找connection
+			for (int j = 0; j <= n; j++){
+				if (i != j && G[j][i + n] > 0){	//大于零的反向边就是我们要找的路径
+					res[numline] = i;
+					red[numline] = j;
+					rew[numline++] = G[j][i + n];
+				}
+			}
+		printf("%d\n", numline);
+		for (int i = 0; i < numline; i++)
+			printf("%d %d %d\n", res[i], red[i], rew[i]);
+	}
+
+
+	system("pause");
+	return 0;
+}

@@ -1,0 +1,217 @@
+Computer Virus on Planet Pandora
+潘多拉星球上的电脑病毒
+
+总时间限制: 2000ms 内存限制: 65536kB
+描述
+Aliens on planet Pandora also write computer programs like us. Their programs only consist of capital letters (‘A’ to ‘Z’) which they learned from the Earth. On planet Pandora, hackers make computer virus, so they also have anti-virus software. Of course they learned virus scanning algorithm from the Earth. Every virus has a pattern string which consists of only capital letters. If a virus’s pattern string is a substring of a program, or the pattern string is a substring of the reverse of that program, they can say the program is infected by that virus. Give you a program and a list of virus pattern strings, please write a program to figure out how many viruses the program is infected by.
+输入
+There are multiple test cases. The first line in the input is an integer T ( T <= 10) indicating the number of test cases.
+
+For each test case:
+
+The first line is a integer n( 0 < n <= 250) indicating the number of virus pattern strings.
+
+Then n lines follows, each represents a virus pattern string. Every pattern string stands for a virus. It’s guaranteed that those n pattern strings are all different so there are n different viruses. The length of pattern string is no more than 1,000 and a pattern string at least consists of one letter.
+
+The last line of a test case is the program. The program may be described in a compressed format. A compressed program consists of capital letters and “compressors”. A “compressor” is in the following format:
+
+[qx]
+
+q is a number( 0 < q <= 5,000,000)and x is a capital letter. It means q consecutive letter xs in the original uncompressed program. For example, [6K] means ‘KKKKKK’ in the original program. So, if a compressed program is like:
+
+AB[2D]E[7K]G
+
+It actually is ABDDEKKKKKKKG after decompressed to original format.
+The length of the program is at least 1 and at most 5,100,000, no matter in the compressed format or after it is decompressed to original format.
+输出
+For each test case, print an integer K in a line meaning that the program is infected by K viruses.
+样例输入
+3
+2
+AB
+DCB
+DACB
+3
+ABC
+CDE
+GHI
+ABCCDEFIHG
+4
+ABB
+ACDEE
+BBB
+FEEE
+A[2B]CD[4E]F
+样例输出
+0
+3
+2
+提示
+In the second case in the sample input, the reverse of the program is ‘GHIFEDCCBA’, and ‘GHI’ is a substring of the reverse, so the program is infected by virus ‘GHI’.
+
+Answer：
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+//#define MAXN 304
+
+
+int n, m;
+char str[5100008];
+const int LETTERS = 26;
+int nNodesCount = 0;
+struct CNode
+{
+	CNode * pChilds[LETTERS];
+	CNode * pPrev; //前缀指针
+	int count;
+	CNode() {
+		memset(pChilds, 0, sizeof(pChilds));
+		count = 0;
+		pPrev = NULL;
+	}
+};
+CNode Tree[250108];
+
+void Insert(CNode * pRoot, char * s)
+{//将模式串s插入trie树
+	int len = strlen(s);
+	for (int i = 0; i < len; i++) {
+		if (pRoot->pChilds[s[i] - 'A'] == NULL) {
+			pRoot->pChilds[s[i] - 'A'] =
+				Tree + nNodesCount;
+			nNodesCount++;
+		}
+		pRoot = pRoot->pChilds[s[i] - 'A'];
+	}
+	pRoot->count++;
+}
+
+void BuildDfa() { //在trie树上加前缀指针
+	for (int i = 0; i < LETTERS; i++)
+		Tree[0].pChilds[i] = Tree + 1;
+	Tree[0].pPrev = NULL;
+	Tree[1].pPrev = Tree;
+	deque<CNode * > q;
+	q.push_back(Tree + 1);
+
+	while (!q.empty()) {
+		CNode * pRoot = q.front();
+		q.pop_front();
+		for (int i = 0; i < LETTERS; i++) {
+			CNode * p = pRoot->pChilds[i];
+			if (p) {
+				CNode * pPrev = pRoot->pPrev;
+				while (pPrev) {
+					if (pPrev->pChilds[i] == NULL)
+						pPrev = pPrev->pPrev;
+					else {
+						p->pPrev = pPrev->pChilds[i];
+						break;
+					}
+
+				}
+				q.push_back(p);
+
+			}
+		}
+	} //对应于while( ! q.empty() )
+}
+
+int SearchDfa(char * s){
+	CNode * p = Tree + 1;
+	int cnt = 0;
+	for (int i = 0; s[i]; ++i) {
+		int tmpnum = s[i] - 'A';
+		while (p->pChilds[tmpnum] == NULL&&(p != Tree + 1))
+			p = p->pPrev;
+		if (p->pChilds[tmpnum])
+			p = p->pChilds[tmpnum];
+		CNode *tmp = p;
+		while ((tmp != NULL) && (tmp->count != -1)) {
+			cnt += tmp->count;
+			tmp->count = -1;
+			tmp = tmp->pPrev;
+		}
+		
+	}
+	return cnt;
+}
+
+/*bool travelDfa(CNode * pRoot) {
+	if (pRoot->reached == 1)
+		return true;
+	pRoot->reached = 1;
+
+	for (int i = 0; i < LETTERS; i++) {
+		if ((pRoot->pChilds[i] != NULL)) {
+			if ((!pRoot->pChilds[i]->bBadNode) && (pRoot->pChilds[i]->reached != -1)) {
+				if (travelDfa(pRoot->pChilds[i]))
+					return true;
+			}
+		}
+		else {
+			CNode *p = pRoot->pPrev;
+			while (p->pChilds[i] == NULL)
+				p = p->pPrev;
+			p = p->pChilds[i];
+			if ((!p->bBadNode) && (p->reached != -1))
+				if (travelDfa(p))
+					return true;
+		}
+	}
+	pRoot->reached = -1;
+	return false;
+}
+*/
+
+int main() {
+	int cases;
+	scanf("%d", &cases);
+	while (cases--) {
+
+		memset(Tree, 0, sizeof(Tree));
+		char strin1[5100008] = { '\0' }, strin2[5100008] = { '\0' };
+		nNodesCount = 2;
+		scanf("%d", &n);
+		for (int i = 0; i < n; ++i) {
+			scanf("%s", str);
+			Insert(Tree + 1, str);
+		}
+		BuildDfa();
+		scanf("%s", str);
+		int strinum = 0;
+		for (int i = 0; str[i]; i++) {
+			if (str[i] == '[') {
+				char tmp[10] = { '\0' };
+				int tmpi = 0;
+				i++;
+				while (str[i] >= '0'&&str[i] <= '9') {
+					tmp[tmpi++] = str[i];
+					i++;
+				}
+				int numi = atoi(tmp);
+				for (int j = 0; j < numi; j++)
+					strin1[strinum++] = str[i];
+				i++;
+			}
+			else
+				strin1[strinum++] = str[i];
+		}
+		for (int i = 0; i < strinum; i++)
+			strin2[i] = strin1[strinum - 1 - i];
+		printf("%d\n", SearchDfa(strin1) + SearchDfa(strin2));
+
+
+	}
+	return 0;
+}

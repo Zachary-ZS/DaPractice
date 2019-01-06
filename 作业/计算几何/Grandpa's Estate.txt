@@ -1,0 +1,459 @@
+Grandpa's Estate
+
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+Being the only living descendant of his grandfather, Kamran the Believer inherited all of the grandpa's belongings. The most valuable one was a piece of convex polygon shaped farm in the grandpa's birth village. The farm was originally separated from the neighboring farms by a thick rope hooked to some spikes (big nails) placed on the boundary of the polygon. But, when Kamran went to visit his farm, he noticed that the rope and some spikes are missing. Your task is to write a program to help Kamran decide whether the boundary of his farm can be exactly determined only by the remaining spikes.
+输入
+The first line of the input file contains a single integer t (1 <= t <= 10), the number of test cases, followed by the input data for each test case. The first line of each test case contains an integer n (1 <= n <= 1000) which is the number of remaining spikes. Next, there are n lines, one line per spike, each containing a pair of integers which are x and y coordinates of the spike.
+输出
+There should be one output line per test case containing YES or NO depending on whether the boundary of the farm can be uniquely determined from the input.
+样例输入
+1
+6 
+0 0
+1 2
+3 4
+2 0
+2 4 
+5 0
+样例输出
+NO
+来源
+Tehran 2002 Preliminery
+
+Answer：
+
+// 这是用郭老师的模板写的，不知道哪有问题，一直RE
+#include <math.h>
+#include <string.h>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+using namespace std;
+
+double PI = acos(-1);
+double INF = 1e20;
+double EPS = 1e-6;
+#define CPoint CVector
+
+bool IsZero(double x) {
+    return -EPS < x && x < EPS;
+}
+int Sign(double x) {  // 判断 x 是大于0,等于0还是小于0
+    return fabs(x) < EPS ? 0 : x > 0 ? 1 : -1;
+}
+bool FLarger(double a, double b) {
+    return a - b > EPS;
+}
+bool FLess(double a, double b) {
+    return b - a > EPS;
+}
+bool FLessEq(double a, double b) {
+    return b - a > EPS || IsZero(b - a);
+}
+
+struct CVector {
+    double x, y;
+    char label;
+    CVector(double xx, double yy, char la = '0') : x(xx), y(yy), label(la) {}
+    CVector() {}
+    // double operator^(const CVector &v) const { return x * v.y - v.x * y; }
+};
+class CLine {
+   public:
+    CPoint a, b;
+    CLine(CVector aa, CVector bb) : a(aa), b(bb) {}
+    CLine() {}
+};
+class Seg : public CLine {
+   public:
+    Seg() {}
+    Seg(const CPoint& aa, const CPoint& bb) : CLine(aa, bb) {}
+    //直线两点式方程 (y-y1)/(y2-y1) = (x-x1)/(x2-x1)
+    double getX(double y) {  //给定y坐标，求直线上的 x坐标
+        return (y - a.y) / (b.y - a.y) * (b.x - a.x) + a.x;
+    }
+    double getY(double x) {  //给定x坐标，求直线上的y坐标
+        return (x - a.x) / (b.x - a.x) * (b.y - a.y) + a.y;
+    }
+};
+
+CVector operator-(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x - p2.x, p1.y - p2.y);
+}
+CVector operator+(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x + p2.x, p1.y + p2.y);
+}
+CVector operator*(double k, CVector p) {
+    return CVector(k * p.x, k * p.y);
+}
+double operator*(CVector p, CVector q) {
+    return p.x * q.x + p.y * q.y;
+}
+bool operator==(CVector p, CVector q) {
+    return (p.x == q.x) && (p.y == q.y);
+}
+double length(CVector p) {
+    return sqrt(p * p);
+}
+CVector unit(CVector p) {
+    return 1 / length(p) * p;
+}
+double project(CVector p, CVector n) {
+    return p * unit(n);
+}
+double operator^(CVector p, CVector q) {
+    return p.x * q.y - q.x * p.y;
+}
+double Cross(const CVector& p, const CVector& q) {
+    return p.x * q.y - q.x * p.y;
+}
+
+bool operator<(const CPoint& p1, const CPoint& p2) {
+    //如果p1^p2 〉 0，说明p1经逆时针旋转<180度可以到p2，则 p1 < p2
+    if ((CVector(p2 - CPoint(0, 0)) ^ CVector(p1 - CPoint(0, 0))) > 0)
+        return true;
+    return false;
+}
+double area(CVector p, CVector q) {
+    return (p ^ q) / 2;
+}
+
+double dist(CPoint p, CPoint q) {
+    return length(p - q);
+}
+double dist(CPoint p, CLine l) {
+    return fabs((p - l.a) ^ (l.b - l.a)) / length(l.b - l.a);
+}
+
+// Type means how they intersect, 0 means coincidence, 1 for parallel, 2 for
+// intersect.
+CPoint intersect(CLine l, CLine m, int* type) {
+    double x = area(m.a - l.a, l.b - l.a);
+    double y = area(l.b - l.a, m.b - l.a);
+    if (IsZero(x + y)) {
+        if (IsZero(dist(l.a, m)))
+            *type = 0;
+        else
+            *type = 1;
+        return CPoint(-1, -1);
+    }
+    *type = 2;
+    CVector t1 = m.b - m.a;
+    CVector tmp = (x / (x + y)) * (m.b - m.a);
+    return (m.a + tmp);
+}
+
+bool PointInSeg(CPoint p, Seg L) {
+    double tmp = Cross(L.a - p, L.a - L.b);
+    if (!IsZero(tmp))
+        return false;
+    if (FLessEq(min(L.a.x, L.b.x), p.x) && FLessEq(p.x, max(L.a.x, L.b.x)) &&
+        FLessEq(min(L.a.y, L.b.y), p.y) && FLessEq(p.y, max(L.a.y, L.b.y)))
+        return true;
+    return false;
+}
+
+pair<int, CPoint> CrossPoint(Seg s1, Seg s2) {
+    /*
+    返回值 result.first:
+        0 规范相交，
+        1 端点重合，但不平行，不共线
+        2 一个端点在另一个内部 s1端点在 s2内部 (不平行，不共线）
+        3 一个端点在另一个内部 s2端点在 s1内部 (不平行，不共线）
+        4 无交点，不平行，不共线，两直线交点是result.second
+        5 平行
+        6 共线且有公共点
+        7 共线且无公共点
+        8 s1,s2无交点，但是s2所在直线和s1有交点，即交点在s1上
+        9 s1,s2无交点，但是s1所在直线和s2有交点，即交点在s2上
+    */
+    CPoint p1 = s1.a;
+    CPoint p2 = s1.b;
+    CPoint p3 = s2.a;
+    CPoint p4 = s2.b;
+    double a1 = area(p3 - p1, p4 - p1);
+    double a2 = area(p4 - p2, p3 - p2);  //这些顺序不能乱
+    if (Cross(p2 - p1, p3 - p1) * Cross(p2 - p1, p4 - p1) < -EPS &&
+        Cross(p4 - p3, p1 - p3) * Cross(p4 - p3, p2 - p3) < -EPS) {  // 规范相交
+        return make_pair(0, p1 + (a1 / (a1 + a2)) * (p2 - p1));
+    }
+    if (!(IsZero(Cross(p2 - p1, p3 - p4)))) {
+        //不平行,不共线
+        if (p1 == p3 || p1 == p4)
+            //端点重合且不平行，不共线
+            return make_pair(1, p1);
+        if (p2 == p3 || p2 == p4)
+            return make_pair(1, p2);
+        if (PointInSeg(p1, s2))
+            return make_pair(2, p1);
+        if (PointInSeg(p2, s2))
+            return make_pair(2, p2);
+        if (PointInSeg(p3, s1))
+            return make_pair(3, p3);
+        if (PointInSeg(p4, s1))
+            return make_pair(3, p4);
+        CPoint crossPoint = p1 + (a1 / (a1 + a2)) * (p2 - p1);
+        if (PointInSeg(crossPoint, s1))
+            return make_pair(8, crossPoint);
+        if (PointInSeg(crossPoint, s2))
+            return make_pair(9, crossPoint);
+        return make_pair(4, crossPoint);
+        // 直线和线段也无交点，不平行，不共线，两直线交点是second
+    }
+    if (!IsZero(dist(p1, s2)))
+        return make_pair(5, CPoint(0, 0));  //平行
+    //下面都是共线，且有公共点
+    if (PointInSeg(p1, s2))
+        return make_pair(6, p1);
+    if (PointInSeg(p2, s2))
+        return make_pair(6, p2);
+    if (PointInSeg(p3, s1))
+        return make_pair(6, p3);
+    if (PointInSeg(p4, s1))
+        return make_pair(6, p4);
+    return make_pair(7, CPoint(0, 0));  //共线，且无公共点
+}
+struct Comp {  //用来定义极角排序规则的函数对象
+    CPoint p0;  //以p0为原点进行极角排序,极角相同的，离p0近算小
+    Comp(const CPoint& p) : p0(p.x, p.y) {}
+    bool operator()(const CPoint& p1, const CPoint& p2) const {
+        int s = Sign(Cross(p1 - p0, p2 - p0));
+        if (s > 0)
+            return true;
+        else if (s < 0)
+            return false;
+        else {
+            if (dist(p0, p1) < dist(p0, p2))
+                return true;
+            else
+                return false;
+        }
+    }
+};
+
+int Graham(vector<CPoint>& points, vector<CPoint>& stack) {
+    // points是点集合
+    if (points.size() < 3)
+        return 0;  //返回凸包顶点数
+    stack.clear();
+    //先按坐标排序，最左下的放到points[0]
+    sort(points.begin(), points.end());
+    //以points[0] 为原点进行极角排序
+    sort(points.begin() + 1, points.end(), Comp(points[0]));
+    stack.push_back(points[0]);
+    stack.push_back(points[1]);
+    stack.push_back(points[2]);
+    for (int i = 3; i < points.size(); ++i) {
+        while (true) {
+            CPoint p2 = *(stack.end() - 1);
+            CPoint p1 = *(stack.end() - 2);
+            if (Sign(Cross(p2 - p1, points[i] - p2) <= 0))
+                // p2->points[i]没有向左转，就让p2出栈
+                stack.pop_back();
+            else
+                break;
+        }
+        stack.push_back(points[i]);
+    }
+    return stack.size();
+}
+
+// ------------------------------------------------------------------
+vector<CPoint> p;
+vector<CPoint> stackp;
+
+int main() {
+    int cases;
+    scanf("%d", &cases);
+    while (cases--) {
+        int n;
+        scanf("%d", &n);
+        while (!p.empty())
+            p.pop_back();
+        while (!stackp.empty())
+            stackp.clear();
+        double fx, fy;
+        for (int i = 0; i < n; i++) {
+            scanf("%lf%lf", &fx, &fy);
+            p.push_back(CPoint(fx, fy));
+        }
+        int num = Graham(p, stackp);
+        if (num <= 2 || IsZero(dist(stackp[num - 1], Seg(stackp[0], stackp[1])))) {
+            // all in a line
+            printf("NO\n");
+            continue;
+        }
+        bool ok = true;
+        bool flag = false;
+        // flag means the previous one is in the line or not
+        for (int i = 0; i < num; i++) {
+            Seg tmp = Seg(stackp[i], stackp[(i + 1) % num]);
+            if (IsZero(dist(stackp[(i + 2) % num], tmp))){
+                flag = true;
+                continue;
+            }
+            if (flag)
+                flag = false;
+            else{
+                ok = false;
+                break;
+            }
+        }
+        if(ok == false)
+            printf("NO\n");
+        else
+            printf("YES\n");
+    }
+
+    system("pause");
+    return 0;
+}
+
+
+// 下面就抄网上的代码吧
+#include <math.h>
+#include <string.h>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+using namespace std;
+
+#define EPS 1e-6
+#define INF 0x7fffffff
+#define EPS 1e-6
+#define IsZero(x) (((x) > 0 ? (x) : -(x)) < EPS)
+const int MAXN = 1008;
+
+struct CPoint {
+    double x, y;
+};
+double dist(CPoint p1, CPoint p2) {
+    return sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+}
+
+double crossmulty(CPoint p1, CPoint p2, CPoint p0) {
+    return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
+}
+
+int point_in_line(CPoint p1, CPoint p2, CPoint p3) {
+    return IsZero(crossmulty(p1, p2, p3));
+}
+
+double area(CPoint* p, int n) {
+    double areaa = 0;
+    for (int i = 0; i < n - 1; i++)
+        areaa += ((p[i].x * p[i + 1].y) - (p[i + 1].x * p[i].y));
+    areaa += ((p[n - 1].x * p[1].y) - (p[1].x * p[n - 1].y));
+    return fabs(areaa) / 2;
+}
+
+
+CPoint p[MAXN];
+int n;
+int stackp[MAXN], top;
+bool Jijiaosort(CPoint p1, CPoint p2) {
+    int tmp = crossmulty(p[0], p1, p2);
+    if (tmp > 0)
+        return true;
+    else if (tmp == 0 && dist(p[0], p1) < dist(p[0], p2))
+        return true;
+    else
+        return false;
+}
+
+void Graham(int n) {
+    int i;
+    if (n == 1) {
+        top = 0;
+        stackp[0] = 0;
+    }
+    if (n == 2) {
+        top = 1;
+        stackp[0] = 0;
+        stackp[1] = 1;
+    }
+    if (n > 2) {
+        for (int i = 0; i <= 1; i++)
+            stackp[i] = i;
+        top = 1;
+        for (int i = 2; i < n; i++) {
+            while (top > 0 &&
+                   crossmulty(p[stackp[top - 1]], p[stackp[top]], p[i]) <= 0)
+                top--;
+            top++;
+            stackp[top] = i;
+        }
+    }
+}
+
+
+int main() {
+    int cases;
+    scanf("%d", &cases);
+    while (cases--) {
+        double ans = 0, l, minn = INF, miny = INF;
+        int p0 = 0, flag = 0;
+        scanf("%d", &n);
+
+        for (int i = 0; i < n; i++) {
+            scanf("%lf%lf", &p[i].x, &p[i].y);
+            if (p[i].x < minn) {
+                minn = p[i].x;
+                p0 = i;
+                miny = p[i].y;
+            } else if (p[i].x == minn && p[i].y < miny) {
+                p0 = i;
+                miny = p[i].y;
+            }
+        }
+
+        swap(p[0], p[p0]);
+        sort(p + 1, p + n, Jijiaosort);
+        Graham(n);
+
+        if (top <= 1)
+            flag = 1;
+        else
+            for (int i = 0; i <= top; i++) {
+                int dotin = 0;
+                CPoint a = p[stackp[i]], b = p[stackp[(i + 1) % (top + 1)]];
+                for (int i = 0; i < n; i++) {
+                    if (p[i].x == a.x && p[i].y == a.y)
+                        continue;
+                    if (p[i].x == b.x && p[i].y == b.y)
+                        continue;
+                    if (point_in_line(a, b, p[i])) {
+                        dotin = 1;
+                        break;
+                    }
+                }
+                if (!dotin)
+                    flag = 1;
+                if (flag)
+                    break;
+            }
+        if (flag)
+            printf("NO\n");
+        else
+            printf("YES\n");
+    }
+}

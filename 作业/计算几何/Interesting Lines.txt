@@ -1,0 +1,143 @@
+Intersecting Lines
+
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+We all know that a pair of distinct points on a plane defines a line and that a pair of lines on a plane will intersect in one of three ways: 1) no intersection because they are parallel, 2) intersect in a line because they are on top of one another (i.e. they are the same line), 3) intersect in a point. In this problem you will use your algebraic knowledge to create a program that determines how and where two lines intersect. 
+Your program will repeatedly read in four points that define two lines in the x-y plane and determine how and where the lines intersect. All numbers required by this problem will be reasonable, say between -1000 and 1000.
+输入
+The first line contains an integer N between 1 and 10 describing how many pairs of lines are represented. The next N lines will each contain eight integers. These integers represent the coordinates of four points on the plane in the order x1y1x2y2x3y3x4y4. Thus each of these input lines represents two lines on the plane: the line through (x1,y1) and (x2,y2) and the line through (x3,y3) and (x4,y4). The point (x1,y1) is always distinct from (x2,y2). Likewise with (x3,y3) and (x4,y4).
+输出
+There should be N+2 lines of output. The first line of output should read INTERSECTING LINES OUTPUT. There will then be one line of output for each pair of planar lines represented by a line of input, describing how the lines intersect: none, line, or point. If the intersection is a point then your program should output the x and y coordinates of the point, correct to two decimal places. The final line of output should read "END OF OUTPUT".
+样例输入
+5
+0 0 4 4 0 4 4 0
+5 0 7 6 1 0 2 3
+5 0 7 6 3 -6 4 -3
+2 0 2 27 1 5 18 5
+0 3 4 0 1 2 2 5
+样例输出
+INTERSECTING LINES OUTPUT
+POINT 2.00 2.00
+NONE
+LINE
+POINT 2.00 5.00
+POINT 1.07 2.20
+END OF OUTPUT
+来源
+Mid-Atlantic 1996
+
+Answer：
+
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <map>
+#include <math.h>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string.h>
+#include <string>
+#include <vector>
+using namespace std;
+
+double PI = acos(-1);
+double INF = 1e20;
+double EPS = 1e-6;
+#define CPoint CVector
+
+bool IsZero(double x) { return -EPS < x && x < EPS; }
+bool FLarger(double a, double b) { return a - b > EPS; }
+bool FLess(double a, double b) { return b - a > EPS; }
+
+struct CVector {
+    double x, y;
+    CVector(double xx, double yy) : x(xx), y(yy) {}
+    CVector() {}
+    // double operator^(const CVector &v) const { return x * v.y - v.x * y; }
+};
+struct CLine {
+    CPoint a, b;
+    CLine(CVector aa, CVector bb) : a(aa), b(bb) {}
+	CLine() {}
+};
+
+CVector operator-(const CPoint &p1, const CPoint &p2) {
+    return CVector(p1.x - p2.x, p1.y - p2.y);
+}
+CVector operator+(const CPoint &p1, const CPoint &p2) {
+    return CVector(p1.x + p2.x, p1.y + p2.y);
+}
+CVector operator*(double k, CVector p) { return CVector(k * p.x, k * p.y); }
+double operator*(CVector p, CVector q) { return p.x * q.x + p.y * q.y; }
+double length(CVector p) { return sqrt(p * p); }
+CVector unit(CVector p) { return 1 / length(p) * p; }
+double project(CVector p, CVector n) { return p * unit(n); }
+double operator^(CVector p, CVector q) { return p.x * q.y - q.x * p.y; }
+
+bool operator<(const CPoint &p1, const CPoint &p2) {
+    //如果p1^p2 〉 0，说明p1经逆时针旋转<180度可以到p2，则 p1 < p2
+    if ((CVector(p2 - CPoint(0, 0)) ^ CVector(p1 - CPoint(0, 0))) > 0)
+        return true;
+    return false;
+}
+double area(CVector p, CVector q) { return (p ^ q) / 2; }
+
+
+double dist(CPoint p, CPoint q) { return length(p - q); }
+double dist(CPoint p, CLine l) {
+    return fabs((p - l.a) ^ (l.b - l.a)) / length(l.b - l.a);
+}
+
+// Type means how they intersect, 0 means coincidence, 1 for parallel, 2 for
+// intersect.
+CPoint intersect(CLine l, CLine m, int *type) {
+    double x = area(m.a - l.a, l.b - l.a);
+    double y = area(l.b - l.a, m.b - l.a);
+    if (IsZero(x + y)) {
+        if (IsZero(dist(l.a, m)))
+            *type = 0;
+        else
+            *type = 1;
+        return CPoint(-1, -1);
+    }
+    *type = 2;
+    CVector t1 = m.b - m.a;
+    CVector tmp = (x / (x + y)) * (m.b - m.a);
+    return (m.a + tmp);
+}
+
+int main() {
+
+    int n;
+    scanf("%d", &n);
+    printf("INTERSECTING LINES OUTPUT\n");
+    CPoint *d[4];
+    CLine *l1, *l2;
+    while (n--) {
+        double x, y;
+        for (int i = 0; i < 4; i++) {
+            scanf("%lf%lf", &x, &y);
+            d[i] = new CPoint(x, y);
+		}
+        l1 = new CLine(*d[0], *d[1]);
+		l2 = new CLine(*d[2], *d[3]);
+        int type;
+        CVector res = intersect(*l1, *l2, &type);
+        if (type == 0)
+            printf("LINE\n");
+        else if(type == 1)
+            printf("NONE\n");
+		else
+            printf("POINT %.2f %.2f\n", res.x, res.y);
+		delete d[0], delete d[1], delete d[2], delete d[3];
+        delete l1, l2;
+
+    }
+
+    printf("END OF OUTPUT");
+    return 0;
+}

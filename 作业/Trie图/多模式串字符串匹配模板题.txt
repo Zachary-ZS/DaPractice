@@ -1,0 +1,131 @@
+多模式串字符串匹配模板题
+####**************模板！！！！
+
+描述
+给若干个模式串，以及若干个句子，判断每个句子里是否包含模式串。 句子和模式串都由小写字母组成
+
+输入
+第一行是整数n，表示有n个模式串 ( n <= 1000)
+接下来n行每行一个模式串。每个模式串长度不超过20
+接下来一行是整数m，表示有m个句子 (m <= 1000)
+接下来m行，每行一个句子，每个句子长度不超过1000
+输出
+对每个句子，如果包含某个模式串，则输出 YES, 否则输出 NO
+样例输入
+3
+abc
+def
+gh
+2
+abcd
+ak
+样例输出
+YES
+NO
+
+Answer：
+保存郭老师的模板：
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+#define MAXN 1010
+
+
+int n, m;
+char str[MAXN];
+const int LETTERS = 26;
+int nNodesCount = 0;
+struct CNode
+{
+	CNode * pChilds[LETTERS];
+	CNode * pPrev; //前缀指针
+	bool bBadNode; //是否是危险节点
+	CNode() {
+		memset(pChilds, 0, sizeof(pChilds));
+		bBadNode = false;
+		pPrev = NULL;
+	}
+};
+CNode Tree[20000]; //1000个模式串，每个20个字符，每个字符一个节点，也只要20000个节点
+
+void Insert(CNode * pRoot, char * s)
+{//将模式串s插入trie树
+	for (int i = 0; s[i]; i++) {
+		if (pRoot->pChilds[s[i] - 'a'] == NULL) {
+			pRoot->pChilds[s[i] - 'a'] =
+				Tree + nNodesCount;
+			nNodesCount++;
+		}
+		pRoot = pRoot->pChilds[s[i] - 'a'];
+	}
+	pRoot->bBadNode = true;
+}
+
+void BuildDfa() { //在trie树上加前缀指针
+	for (int i = 0; i < LETTERS; i++)
+		Tree[0].pChilds[i] = Tree + 1;
+	Tree[0].pPrev = NULL;
+	Tree[1].pPrev = Tree;
+	deque<CNode * > q;
+	q.push_back(Tree + 1);
+
+	while (!q.empty()) {
+		CNode * pRoot = q.front();
+		q.pop_front();
+		for (int i = 0; i < LETTERS; i++) {
+			CNode * p = pRoot->pChilds[i];
+			if (p) {
+				CNode * pPrev = pRoot->pPrev;
+				while (pPrev->pChilds[i] == NULL)
+					pPrev = pPrev->pPrev;
+				p->pPrev = pPrev->pChilds[i];
+				if (p->pPrev->bBadNode)
+					p->bBadNode = true;
+				//前缀指针指向的节点是危险节点，则自己也是危险节点
+				q.push_back(p);
+			}
+		}
+	} //对应于while( ! q.empty() )
+}
+
+bool SearchDfa(char * s)
+{//返回值为true则说明包含模式串
+	CNode * p = Tree + 1;
+	for (int i = 0; s[i]; ++i) {
+		while (p->pChilds[s[i] - 'a'] == NULL)
+			p = p->pPrev;
+		p = p->pChilds[s[i] - 'a'];
+		if (p->bBadNode)
+			return true;
+	}
+	return false;
+}
+
+int main() {
+
+	nNodesCount = 2;
+	scanf("%d", &n);
+	for (int i = 0; i < n; ++i) {
+		scanf("%s", str);
+		Insert(Tree + 1, str);
+	}
+	BuildDfa();
+	scanf("%d", &m);
+	for (int i = 0; i < m; i++) {
+		scanf("%s", str);
+		if (SearchDfa(str))
+			printf("YES\n");
+		else
+			printf("NO\n");
+	}
+	return 0;
+}

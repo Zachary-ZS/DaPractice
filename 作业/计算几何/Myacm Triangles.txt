@@ -1,0 +1,191 @@
+Myacm Triangles
+
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+
+
+There has been considerable archeological work on the ancient Myacm culture. Many artifacts have been found in what have been called power fields: a fairly small area, less than 100 meters square where there are from four to fifteen tall monuments with crystals on top. Such an area is mapped out above. Most of the artifacts discovered have come from inside a triangular area between just three of the monuments, now called the power triangle. After considerable analysis archeologists agree how this triangle is selected from all the triangles with three monuments as vertices: it is the triangle with the largest possible area that does not contain any other monuments inside the triangle or on an edge of the triangle. Each field contains only one such triangle. 
+
+Archeological teams are continuing to find more power fields. They would like to automate the task of locating the power triangles in power fields. Write a program that takes the positions of the monuments in any number of power fields as input and determines the power triangle for each power field.
+
+A useful formula: the area of a triangle with vertices (x1, y1), (x2, y2), and (x3, y3) is the absolute value of
+
+0.5 * [(y3 - y1)(x2 - x1) - (y2 - y1)(x3 - x1)]. 
+输入
+For each power field there are several lines of data. The first line is the number of monuments: at least 4, and at most 15. For each monument there is a data line that starts with a one character label for the monument and is followed by the coordinates of the monument, which are nonnegative integers less than 100. The first label is A, and the next is B, and so on.
+
+There is at least one such power field described. The end of input is indicated by a 0 for the number of monuments. The first sample data below corresponds to the diagram in the problem.
+输出
+For each power field there is one line of output. It contains the three labels of the vertices of the power triangle, listed in increasing alphabetical order, with no spaces.
+样例输入
+6
+A 1 0
+B 4 0
+C 0 3
+D 1 3
+E 4 4
+F 0 6
+4
+A 0 0
+B 1 0
+C 99 0
+D 99 99
+0
+样例输出
+BEF
+BCD
+来源
+Mid-Central USA 1999
+
+Answer：
+
+// 就是问面积最大的而且没有其他点在其内或边上的三角形。
+
+#include <math.h>
+#include <string.h>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+using namespace std;
+
+double PI = acos(-1);
+double INF = 1e20;
+double EPS = 1e-6;
+#define CPoint CVector
+
+bool IsZero(double x) {
+    return -EPS < x && x < EPS;
+}
+bool FLarger(double a, double b) {
+    return a - b > EPS;
+}
+bool FLess(double a, double b) {
+    return b - a > EPS;
+}
+
+struct CVector {
+    double x, y;
+    char label;
+    CVector(double xx, double yy, char la = '0') : x(xx), y(yy), label(la) {}
+    CVector() {}
+    // double operator^(const CVector &v) const { return x * v.y - v.x * y; }
+};
+struct CLine {
+    CPoint a, b;
+    CLine(CVector aa, CVector bb) : a(aa), b(bb) {}
+    CLine() {}
+};
+
+CVector operator-(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x - p2.x, p1.y - p2.y);
+}
+CVector operator+(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x + p2.x, p1.y + p2.y);
+}
+CVector operator*(double k, CVector p) {
+    return CVector(k * p.x, k * p.y);
+}
+double operator*(CVector p, CVector q) {
+    return p.x * q.x + p.y * q.y;
+}
+double length(CVector p) {
+    return sqrt(p * p);
+}
+CVector unit(CVector p) {
+    return 1 / length(p) * p;
+}
+double project(CVector p, CVector n) {
+    return p * unit(n);
+}
+double operator^(CVector p, CVector q) {
+    return p.x * q.y - q.x * p.y;
+}
+
+bool operator<(const CPoint& p1, const CPoint& p2) {
+    //如果p1^p2 〉 0，说明p1经逆时针旋转<180度可以到p2，则 p1 < p2
+    if ((CVector(p2 - CPoint(0, 0)) ^ CVector(p1 - CPoint(0, 0))) > 0)
+        return true;
+    return false;
+}
+double area(CVector p, CVector q) {
+    return fabs((p ^ q) / 2);
+}
+
+double dist(CPoint p, CPoint q) {
+    return length(p - q);
+}
+double dist(CPoint p, CLine l) {
+    return fabs((p - l.a) ^ (l.b - l.a)) / length(l.b - l.a);
+}
+
+// Type means how they intersect, 0 means coincidence, 1 for parallel, 2 for
+// intersect.
+CPoint intersect(CLine l, CLine m, int* type) {
+    double x = area(m.a - l.a, l.b - l.a);
+    double y = area(l.b - l.a, m.b - l.a);
+    if (IsZero(x + y)) {
+        if (IsZero(dist(l.a, m)))
+            *type = 0;
+        else
+            *type = 1;
+        return CPoint(-1, -1);
+    }
+    *type = 2;
+    CVector t1 = m.b - m.a;
+    CVector tmp = (x / (x + y)) * (m.b - m.a);
+    return (m.a + tmp);
+}
+
+
+CPoint p[16];
+
+int main() {
+    int n;
+    while (scanf("%d", &n) && n) {
+        getchar();
+        double maxsq = 0;
+        int maxi, maxj, maxk;
+        for (int i = 0; i < n;i++){
+            scanf("%c%lf%lf", &p[i].label, &p[i].x, &p[i].y);
+            getchar();
+        }
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++){
+                for (int k = j + 1; k < n; k++){
+                    double sq = area(p[j] - p[i], p[k] - p[j]);
+                    if (sq < maxsq)
+                        continue;
+                    bool flag = true;
+                    for (int l = 0; l < n; l++){
+                        if (l == i || l == j || l == k)
+                            continue;
+                        double tmpsq = area(p[l] - p[i], p[k] - p[l]) +
+                                       area(p[l] - p[k], p[j] - p[l]) +
+                                       area(p[l] - p[j], p[i] - p[l]);
+                        if (IsZero(tmpsq - sq)) {
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag && sq > maxsq) {
+                        maxsq = sq;
+                        maxi = i;
+                        maxj = j;
+                        maxk = k;
+                    }
+                }
+            }
+        }
+        printf("%c%c%c\n", p[maxi].label, p[maxj].label, p[maxk].label);
+    }
+    return 0;
+}

@@ -1,0 +1,295 @@
+Pipe
+
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+The GX Light Pipeline Company started to prepare bent pipes for the new transgalactic light pipeline. During the design phase of the new pipe shape the company ran into the problem of determining how far the light can reach inside each component of the pipe. Note that the material which the pipe is made from is not transparent and not light reflecting. 
+
+
+Each pipe component consists of many straight pipes connected tightly together. For the programming purposes, the company developed the description of each component as a sequence of points [x1; y1], [x2; y2], . . ., [xn; yn], where x1 < x2 < . . . xn . These are the upper points of the pipe contour. The bottom points of the pipe contour consist of points with y-coordinate decreased by 1. To each upper point [xi; yi] there is a corresponding bottom point [xi; (yi)-1] (see picture above). The company wants to find, for each pipe component, the point with maximal x-coordinate that the light will reach. The light is emitted by a segment source with endpoints [x1; (y1)-1] and [x1; y1] (endpoints are emitting light too). Assume that the light is not bent at the pipe bent points and the bent points do not stop the light beam.
+输入
+The input file contains several blocks each describing one pipe component. Each block starts with the number of bent points 2 <= n <= 20 on separate line. Each of the next n lines contains a pair of real values xi, yi separated by space. The last block is denoted with n = 0.
+输出
+The output file contains lines corresponding to blocks in input file. To each block in the input file there is one line in the output file. Each such line contains either a real value, written with precision of two decimal places, or the message Through all the pipe.. The real value is the desired maximal x-coordinate of the point where the light can reach from the source for corresponding pipe component. If this value equals to xn, then the message Through all the pipe. will appear in the output file.
+样例输入
+4
+0 1
+2 2
+4 1
+6 4
+6
+0 1
+2 -0.6
+5 -4.45
+7 -5.57
+12 -10.8
+17 -16.55
+0
+样例输出
+4.67
+Through all the pipe.
+来源
+Central Europe 1995
+
+Answer：
+
+#include <math.h>
+#include <string.h>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+using namespace std;
+
+double PI = acos(-1);
+double INF = 1e20;
+double EPS = 1e-6;
+#define CPoint CVector
+
+bool IsZero(double x) {
+    return -EPS < x && x < EPS;
+}
+bool FLarger(double a, double b) {
+    return a - b > EPS;
+}
+bool FLess(double a, double b) {
+    return b - a > EPS;
+}
+bool FLessEq(double a, double b) {
+    return b - a > EPS || IsZero(b - a);
+}
+
+struct CVector {
+    double x, y;
+    char label;
+    CVector(double xx, double yy, char la = '0') : x(xx), y(yy), label(la) {}
+    CVector() {}
+    // double operator^(const CVector &v) const { return x * v.y - v.x * y; }
+};
+class CLine {
+   public:
+    CPoint a, b;
+    CLine(CVector aa, CVector bb) : a(aa), b(bb) {}
+    CLine() {}
+};
+class Seg : public CLine {
+   public:
+    Seg() {}
+    Seg(const CPoint& aa, const CPoint& bb) : CLine(aa, bb) {}
+    //直线两点式方程 (y-y1)/(y2-y1) = (x-x1)/(x2-x1)
+    double getX(double y) {  //给定y坐标，求直线上的 x坐标
+        return (y - a.y) / (b.y - a.y) * (b.x - a.x) + a.x;
+    }
+    double getY(double x) {  //给定x坐标，求直线上的y坐标
+        return (x - a.x) / (b.x - a.x) * (b.y - a.y) + a.y;
+    }
+};
+
+CVector operator-(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x - p2.x, p1.y - p2.y);
+}
+CVector operator+(const CPoint& p1, const CPoint& p2) {
+    return CVector(p1.x + p2.x, p1.y + p2.y);
+}
+CVector operator*(double k, CVector p) {
+    return CVector(k * p.x, k * p.y);
+}
+double operator*(CVector p, CVector q) {
+    return p.x * q.x + p.y * q.y;
+}
+bool operator==(CVector p, CVector q) {
+    return (p.x == q.x) && (p.y == q.y);
+}
+double length(CVector p) {
+    return sqrt(p * p);
+}
+CVector unit(CVector p) {
+    return 1 / length(p) * p;
+}
+double project(CVector p, CVector n) {
+    return p * unit(n);
+}
+double operator^(CVector p, CVector q) {
+    return p.x * q.y - q.x * p.y;
+}
+double Cross(const CVector& p, const CVector& q) {
+    return p.x * q.y - q.x * p.y;
+}
+
+bool operator<(const CPoint& p1, const CPoint& p2) {
+    //如果p1^p2 〉 0，说明p1经逆时针旋转<180度可以到p2，则 p1 < p2
+    if ((CVector(p2 - CPoint(0, 0)) ^ CVector(p1 - CPoint(0, 0))) > 0)
+        return true;
+    return false;
+}
+double area(CVector p, CVector q) {
+    return (p ^ q) / 2;
+}
+
+double dist(CPoint p, CPoint q) {
+    return length(p - q);
+}
+double dist(CPoint p, CLine l) {
+    return fabs((p - l.a) ^ (l.b - l.a)) / length(l.b - l.a);
+}
+
+// Type means how they intersect, 0 means coincidence, 1 for parallel, 2 for
+// intersect.
+CPoint intersect(CLine l, CLine m, int* type) {
+    double x = area(m.a - l.a, l.b - l.a);
+    double y = area(l.b - l.a, m.b - l.a);
+    if (IsZero(x + y)) {
+        if (IsZero(dist(l.a, m)))
+            *type = 0;
+        else
+            *type = 1;
+        return CPoint(-1, -1);
+    }
+    *type = 2;
+    CVector t1 = m.b - m.a;
+    CVector tmp = (x / (x + y)) * (m.b - m.a);
+    return (m.a + tmp);
+}
+
+bool PointInSeg(CPoint p, Seg L) {
+    double tmp = Cross(L.a - p, L.a - L.b);
+    if (!IsZero(tmp))
+        return false;
+    if (FLessEq(min(L.a.x, L.b.x), p.x) && FLessEq(p.x, max(L.a.x, L.b.x)) &&
+        FLessEq(min(L.a.y, L.b.y), p.y) && FLessEq(p.y, max(L.a.y, L.b.y)))
+        return true;
+    return false;
+}
+
+pair<int, CPoint> CrossPoint(Seg s1, Seg s2) {
+    /*
+    返回值 result.first:
+        0 规范相交，
+        1 端点重合，但不平行，不共线
+        2 一个端点在另一个内部 s1端点在 s2内部 (不平行，不共线）
+        3 一个端点在另一个内部 s2端点在 s1内部 (不平行，不共线）
+        4 无交点，不平行，不共线，两直线交点是result.second
+        5 平行
+        6 共线且有公共点
+        7 共线且无公共点
+        8 s1,s2无交点，但是s2所在直线和s1有交点，即交点在s1上
+        9 s1,s2无交点，但是s1所在直线和s2有交点，即交点在s2上
+    */
+    CPoint p1 = s1.a;
+    CPoint p2 = s1.b;
+    CPoint p3 = s2.a;
+    CPoint p4 = s2.b;
+    double a1 = area(p3 - p1, p4 - p1);
+    double a2 = area(p4 - p2, p3 - p2);  //这些顺序不能乱
+    if (Cross(p2 - p1, p3 - p1) * Cross(p2 - p1, p4 - p1) < -EPS &&
+        Cross(p4 - p3, p1 - p3) * Cross(p4 - p3, p2 - p3) < -EPS) {  // 规范相交
+        return make_pair(0, p1 + (a1 / (a1 + a2)) * (p2 - p1));
+    }
+    if (!(IsZero(Cross(p2 - p1, p3 - p4)))) {
+        //不平行,不共线
+        if (p1 == p3 || p1 == p4)
+            //端点重合且不平行，不共线
+            return make_pair(1, p1);
+        if (p2 == p3 || p2 == p4)
+            return make_pair(1, p2);
+        if (PointInSeg(p1, s2))
+            return make_pair(2, p1);
+        if (PointInSeg(p2, s2))
+            return make_pair(2, p2);
+        if (PointInSeg(p3, s1))
+            return make_pair(3, p3);
+        if (PointInSeg(p4, s1))
+            return make_pair(3, p4);
+        CPoint crossPoint = p1 + (a1 / (a1 + a2)) * (p2 - p1);
+        if (PointInSeg(crossPoint, s1))
+            return make_pair(8, crossPoint);
+        if (PointInSeg(crossPoint, s2))
+            return make_pair(9, crossPoint);
+        return make_pair(4, crossPoint);
+        // 直线和线段也无交点，不平行，不共线，两直线交点是second
+    }
+    if (!IsZero(dist(p1, s2)))
+        return make_pair(5, CPoint(0, 0));  //平行
+    //下面都是共线，且有公共点
+    if (PointInSeg(p1, s2))
+        return make_pair(6, p1);
+    if (PointInSeg(p2, s2))
+        return make_pair(6, p2);
+    if (PointInSeg(p3, s1))
+        return make_pair(6, p3);
+    if (PointInSeg(p4, s1))
+        return make_pair(6, p4);
+    return make_pair(7, CPoint(0, 0));  //共线，且无公共点
+}
+
+CPoint p[44];
+
+int main() {
+    int n;
+    while (scanf("%d", &n) && n) {
+        double maxsq = 0;
+        int maxi, maxj, maxk;
+        for (int i = 0; i < n; i++) {
+            scanf("%lf%lf", &p[i].x, &p[i].y);
+            p[i + n] = p[i] - CPoint(0, 1);
+        }
+        Seg line;
+        CPoint farthest = CPoint(-88888, 0);
+        bool ok = false;
+        for (int i = 0; i < n; i++){
+            for (int j = 0; j < n; j++) {
+                if (j == i)
+                    continue;
+                // i for upper point, j for the bottom point
+                line.a = p[i];
+                line.b = p[j + n];
+                pair<int, CPoint> res;
+                int k = 0;
+                for (k = 0; k < n; k++) {
+                    res = CrossPoint(line, Seg(p[k], p[k + n]));
+                    if ((res.first >= 0 && res.first <= 3) || res.first == 9)
+                        continue;
+                    if (k == 0)
+                        break;
+                    pair<int, CPoint> dot1 =
+                        CrossPoint(line, Seg(p[k - 1], p[k]));
+                    pair<int, CPoint> dot2 =
+                        CrossPoint(line, Seg(p[k + n - 1], p[k + n]));
+                    if ((dot1.first >= 0 && dot1.first <= 3) || dot1.first == 9){
+                        if (dot1.second.x > farthest.x){
+                            farthest.x = dot1.second.x;
+                            farthest.y = dot1.second.y;
+                        }
+                    }
+                    if ((dot2.first >= 0 && dot2.first <= 3) || dot2.first == 9){
+                        if (dot2.second.x > farthest.x){
+                            farthest.x = dot2.second.x;
+                            farthest.y = dot2.second.y;
+                        }
+                    }
+                    break;
+                }
+                if (k == n){
+                    ok = true;
+                    break;
+                }
+            }
+            if (ok == true)
+                break;
+        }
+        if (ok == true)
+            printf("Through all the pipe.\n");
+        else
+            printf("%.2f\n", farthest.x);
+    }
+
+    system("pause");
+    return 0;
+}

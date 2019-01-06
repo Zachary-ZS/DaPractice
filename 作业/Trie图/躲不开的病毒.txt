@@ -1,0 +1,166 @@
+躲不开的病毒
+总时间限制: 1000ms 内存限制: 1000kB
+描述
+有若干种病毒，每种病毒的特征代码都是一个01串。
+
+每个程序也都是一个01串。
+
+问是否存在不被病毒感染（不包含任何病毒的特征代码）的无限长的程序。
+
+输入
+第一行是整数n，表示有n个病毒
+接下来n行，每行是一个由 0,1构成的字符串，表示一个病毒特征代码
+所有的病毒的特征代码总长度不超过30000
+输出
+如果存在无限长的没有被病毒感染的程序，输出 "TAK"，否则输出"NIE"
+样例输入
+样例1:
+2
+10
+11
+样例2:
+2
+1
+0
+样例输出
+样例1:
+TAK
+样例2:
+NIE
+来源
+test cases by Xu Yewen
+
+Answer：
+（模板直接用的讲义的，searchDfa没用到也没删）
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+#define MAXN 5010
+
+
+int n, m;
+char str[MAXN];
+const int LETTERS = 2;
+int nNodesCount = 0;
+struct CNode
+{
+	CNode * pChilds[LETTERS];
+	CNode * pPrev; //前缀指针
+	bool bBadNode; //是否是危险节点
+	int reached;  //标记在寻环过程中是否走过此节点
+	CNode() {
+		memset(pChilds, 0, sizeof(pChilds));
+		bBadNode = false;
+		reached = false;
+		pPrev = NULL;
+	}
+};
+CNode Tree[40004];
+
+void Insert(CNode * pRoot, char * s)
+{//将模式串s插入trie树
+	for (int i = 0; s[i]; i++) {
+		if (pRoot->pChilds[s[i] - '0'] == NULL) {
+			pRoot->pChilds[s[i] - '0'] =
+				Tree + nNodesCount;
+			nNodesCount++;
+		}
+		pRoot = pRoot->pChilds[s[i] - '0'];
+	}
+	pRoot->bBadNode = true;
+}
+
+void BuildDfa() { //在trie树上加前缀指针
+	for (int i = 0; i < LETTERS; i++)
+		Tree[0].pChilds[i] = Tree + 1;
+	Tree[0].pPrev = NULL;
+	Tree[1].pPrev = Tree;
+	deque<CNode * > q;
+	q.push_back(Tree + 1);
+
+	while (!q.empty()) {
+		CNode * pRoot = q.front();
+		q.pop_front();
+		for (int i = 0; i < LETTERS; i++) {
+			CNode * p = pRoot->pChilds[i];
+			if (p) {
+				CNode * pPrev = pRoot->pPrev;
+				while (pPrev->pChilds[i] == NULL)
+					pPrev = pPrev->pPrev;
+				p->pPrev = pPrev->pChilds[i];
+				if (p->pPrev->bBadNode)
+					p->bBadNode = true;
+				//前缀指针指向的节点是危险节点，则自己也是危险节点
+				q.push_back(p);
+			}
+		}
+	} //对应于while( ! q.empty() )
+}
+
+bool SearchDfa(char * s)
+{//返回值为true则说明包含模式串
+	CNode * p = Tree + 1;
+	for (int i = 0; s[i]; ++i) {
+		while (p->pChilds[s[i] - '0'] == NULL)
+			p = p->pPrev;
+		p = p->pChilds[s[i] - '0'];
+		if (p->bBadNode)
+			return true;
+	}
+	return false;
+}
+
+bool travelDfa(CNode * pRoot) {
+	if (pRoot->reached == 1)
+		return true;
+	pRoot->reached = 1;
+
+	for (int i = 0; i < LETTERS; i++) {
+		if ((pRoot->pChilds[i] != NULL)) {
+			if ((!pRoot->pChilds[i]->bBadNode) && (pRoot->pChilds[i]->reached != -1)) {
+				if (travelDfa(pRoot->pChilds[i]))
+					return true;
+			}
+		}
+		else {
+			CNode *p = pRoot->pPrev;
+			while (p->pChilds[i] == NULL)
+				p = p->pPrev;
+			p = p->pChilds[i];
+			if ((!p->bBadNode) && (p->reached != -1))
+				if (travelDfa(p))
+					return true;
+		}
+	}
+	pRoot->reached = -1;
+	return false;
+}
+
+int main() {
+
+	nNodesCount = 2;
+	scanf("%d", &n);
+	for (int i = 0; i < n; ++i) {
+		scanf("%s", str);
+		Insert(Tree + 1, str);
+	}
+	BuildDfa();
+
+	
+	if (travelDfa(Tree + 1))
+		printf("TAK\n");
+	else
+		printf("NIE\n");
+	
+
+	system("pause");
+	return 0;
+}

@@ -1,0 +1,138 @@
+Mayor's posters
+
+总时间限制: 1000ms 内存限制: 65536kB
+描述
+The citizens of Bytetown, AB, could not stand that the candidates in the mayoral election campaign have been placing their electoral posters at all places at their whim. The city council has finally decided to build an electoral wall for placing the posters and introduce the following rules: 
+Every candidate can place exactly one poster on the wall. 
+All posters are of the same height equal to the height of the wall; the width of a poster can be any integer number of bytes (byte is the unit of length in Bytetown). 
+The wall is divided into segments and the width of each segment is one byte. 
+Each poster must completely cover a contiguous number of wall segments.
+
+They have built a wall 10000000 bytes long (such that there is enough place for all candidates). When the electoral campaign was restarted, the candidates were placing their posters on the wall and their posters differed widely in width. Moreover, the candidates started placing their posters on wall segments already occupied by other posters. Everyone in Bytetown was curious whose posters will be visible (entirely or in part) on the last day before elections. 
+Your task is to find the number of visible posters when all the posters are placed given the information about posters' size, their place and order of placement on the electoral wall. 
+输入
+The first line of input contains a number c giving the number of cases that follow. The first line of data for a single case contains number 1 <= n <= 10000. The subsequent n lines describe the posters in the order in which they were placed. The i-th line among the n lines contains two integer numbers li and ri which are the number of the wall segment occupied by the left end and the right end of the i-th poster, respectively. We know that for each 1 <= i <= n, 1 <= li <= ri <= 10000000. After the i-th poster is placed, it entirely covers all wall segments numbered li, li+1 ,... , ri.
+输出
+For each input data set print the number of visible posters after all the posters are placed. 
+
+The picture below illustrates the case of the sample input.
+
+样例输入
+1
+5
+1 4
+2 6
+8 10
+3 4
+7 10
+样例输出
+4
+来源
+Alberta Collegiate Programming Contest 2003.10.18
+
+Answer：
+
+#include<iostream>
+#include<algorithm>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+#define maxn 20004
+
+int cases, n, lef[maxn], righ[maxn];
+bool remained[maxn] = { 0 };
+struct node {
+	int posternum;
+	int l, r;
+}seg[maxn * 4];
+
+void build(int root, int lnum, int rnum) {
+	seg[root].l = lnum;
+	seg[root].r = rnum;
+	seg[root].posternum = 0;
+	if (lnum == rnum)
+		return;
+	int middl = (lnum + rnum) >> 1;
+	build(root << 1, lnum, middl);
+	build((root << 1) + 1, middl + 1, rnum);
+}
+void post(int root, int lnum, int rnum, int val) {
+
+	if (seg[root].l >= lnum&& seg[root].r <= rnum) {
+		seg[root].posternum = val;
+		return;
+	}
+	if (seg[root].posternum) {
+		seg[root << 1].posternum = seg[(root << 1) + 1].posternum = seg[root].posternum;
+		seg[root].posternum = 0;
+	}
+	int middl = (seg[root].l + seg[root].r) >> 1;
+	if (lnum <= middl)
+		post(root << 1, lnum, min(middl, rnum), val);
+	if (rnum > middl)
+		post((root << 1) + 1, max(middl + 1, lnum), rnum, val);
+}
+
+void query(int root) {
+
+	if (seg[root].l == seg[root].r&&seg[root].posternum == 0) {
+		return;
+	}
+	if (seg[root].posternum) {
+		remained[seg[root].posternum] = true;
+		return;
+	}
+
+	query(root << 1);
+	query((root << 1) + 1);
+}
+
+
+
+
+int main() {
+	scanf("%d", &cases);
+	int ep[maxn << 1] = { 0 }, epn = 0;
+
+	while (cases--) {
+		memset(remained, 0, sizeof(remained));
+		memset(lef, 0, sizeof(lef));
+		memset(righ, 0, sizeof(righ));
+		memset(seg, 0, sizeof(seg));
+		memset(ep, 0, sizeof(ep));
+		epn = 0;
+
+		scanf("%d", &n);
+		for (int i = 1; i <= n; i++) {
+			scanf("%d %d", &lef[i], &righ[i]);
+			ep[epn++] = lef[i];
+			ep[epn++] = righ[i];
+		}
+		sort(ep, ep + epn);
+		for (int i = 1; i <= n; i++) {
+			lef[i] = (lower_bound(ep, ep + epn, lef[i]) - ep) + 1;
+			righ[i] = (lower_bound(ep, ep + epn, righ[i]) - ep) + 1;
+		}
+		
+		build(1, 1, epn);
+		for (int i = 1; i <= n; i++) {
+			post(1, lef[i], righ[i], i);
+		}
+		query(1);
+		int numout = 0;
+		for (int i = 1; i <= n; i++) {
+			if (remained[i])
+				numout++;
+		}
+		printf("%d\n", numout);
+	
+	}
+
+	system("pause");
+	return 0;
+}

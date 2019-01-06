@@ -1,0 +1,167 @@
+DNA repair
+总时间限制: 2000ms 内存限制: 65536kB
+描述
+Biologists finally invent techniques of repairing DNA that contains segments causing kinds of inherited diseases. For the sake of simplicity, a DNA is represented as a string containing characters 'A', 'G' , 'C' and 'T'. The repairing techniques are simply to change some characters to eliminate all segments causing diseases. For example, we can repair a DNA "AAGCAG" to "AGGCAC" to eliminate the initial causing disease segments "AAG", "AGC" and "CAG" by changing two characters. Note that the repaired DNA can still contain only characters 'A', 'G', 'C' and 'T'.
+
+You are to help the biologists to repair a DNA by changing least number of characters.
+
+输入
+The input consists of multiple test cases. Each test case starts with a line containing one integers N (1 ≤ N ≤ 50), which is the number of DNA segments causing inherited diseases.
+The following N lines gives N non-empty strings of length not greater than 20 containing only characters in "AGCT", which are the DNA segments causing inherited disease.
+The last line of the test case is a non-empty string of length not greater than 1000 containing only characters in "AGCT", which is the DNA to be repaired.
+The last test case is followed by a line containing one zeros.
+
+
+输出
+For each test case, print a line containing the test case number( beginning with 1) followed by the
+number of characters which need to be changed. If it's impossible to repair the given DNA, print -1.
+样例输入
+2
+AAA
+AAG
+AAAG    
+2
+A
+TG
+TGAATG
+4
+A
+G
+C
+T
+AGT
+0
+样例输出
+Case 1: 1
+Case 2: 4
+Case 3: -1
+
+
+Answer：
+// 在树上DP，没搞太明白
+
+#include<iostream>
+#include<stack>
+#include<map>
+#include<list>
+#include<queue>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<string>
+using namespace std;
+
+
+int n, m;
+const int MAXN = 52;
+char str[1024];
+const int LETTERS = 4;
+int nNodesCount = 0;
+int dp[1024][1024] = { 0 };
+inline int v(const char t) {
+	switch (t){
+	case 'A':return 0;
+	case 'G':return 1;
+	case 'C':return 2;
+	case 'T':return 3;
+	}
+}
+const char ch[] = {"AGCT"};
+
+struct CNode
+{
+	CNode * pChilds[LETTERS];
+	CNode * pPrev; //前缀指针
+	int num;;
+	bool bBadNode; //是否是危险节点
+	CNode() {
+		memset(pChilds, 0, sizeof(pChilds));
+		bBadNode = false;
+		pPrev = NULL;
+		num = -1;
+	}
+};
+CNode Tree[1200];
+
+void Insert(CNode * pRoot, char * s)
+{//将模式串s插入trie树
+	for (int i = 0; s[i]; i++) {
+		if (!pRoot->num)
+			pRoot->num = nNodesCount - 1;
+		if (pRoot->pChilds[v(s[i])] == NULL) {
+			pRoot->pChilds[v(s[i])] =
+				Tree + nNodesCount;
+			nNodesCount++;
+		}
+		pRoot = pRoot->pChilds[v(s[i])];
+	}
+	pRoot->bBadNode = true;
+}
+
+void BuildDfa() { //在trie树上加前缀指针
+	for (int i = 0; i < LETTERS; i++)
+		Tree[0].pChilds[i] = Tree + 1;
+	Tree[0].pPrev = NULL;
+	Tree[1].pPrev = Tree;
+	deque<CNode * > q;
+	q.push_back(Tree + 1);
+	while (!q.empty()) {
+		CNode * pRoot = q.front();
+		q.pop_front();
+		for (int i = 0; i < LETTERS; i++) {
+			CNode * p = pRoot->pChilds[i];
+			if (p) {
+				CNode * pPrev = pRoot->pPrev;
+				while (pPrev->pChilds[i] == NULL)
+					pPrev = pPrev->pPrev;
+				p->pPrev = pPrev->pChilds[i];
+				if (p->pPrev->bBadNode)
+					p->bBadNode = true;
+				q.push_back(p);
+			}
+		}
+	}
+}
+int main() {
+	int cases = 0;
+	while (scanf("%d", &n) && n) {
+
+		memset(Tree, 0, sizeof(Tree));
+		memset(dp, 0, sizeof(dp));
+		nNodesCount = 2;
+
+		for (int i = 0; i < n; ++i) {
+			scanf("%s", str);
+			Insert(Tree + 1, str);
+		}
+		BuildDfa();
+		scanf("%s", str);
+		int len = strlen(str);
+		for (int i = 0; i <= len; i++)
+			for (int j = 1; j <= nNodesCount; j++)
+				dp[i][j] = 0x3fffffff;
+		dp[0][1] = 0;
+		for (int i = 0; i < len; i++)
+			for (int j = 1; j < nNodesCount; j++)
+				if (dp[i][j] != 0x3fffffff && !(Tree + j)->bBadNode)
+					for (int k = 0; k < 4; k++) {
+						CNode*tmpp = Tree + j;
+						while (tmpp->pChilds[k] == NULL)
+							tmpp = tmpp->pPrev;
+						tmpp = tmpp->pChilds[k];
+						if (!tmpp->bBadNode)
+							dp[i + 1][tmpp->num] = min(dp[i + 1][tmpp->num], dp[i][j] + (str[i] != ch[k]));
+					}
+
+		int result = 0x3fffffff;
+		for (int i = 1; i < nNodesCount; i++)
+			if (!(Tree + i)->bBadNode)
+				result = min(result, dp[len][i]);
+		if (result == 0x3fffffff)
+			printf("Case %d: %d\n", ++cases, -1);
+		else
+			printf("Case %d: %d\n", ++cases, result);
+	}
+	return 0;
+}

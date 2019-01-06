@@ -1,0 +1,212 @@
+Optimal Milking
+
+// 最大流+二分猜结果
+
+总时间限制: 2000ms 单个测试点时间限制: 1000ms 内存限制: 65536kB
+描述
+FJ has moved his K (1 <= K <= 30) milking machines out into the cow pastures among the C (1 <= C <= 200) cows. A set of paths of various lengths runs among the cows and the milking machines. The milking machine locations are named by ID numbers 1..K; the cow locations are named by ID numbers K+1..K+C.
+
+Each milking point can "process" at most M (1 <= M <= 15) cows each day.
+
+Write a program to find an assignment for each cow to some milking machine so that the distance the furthest-walking cow travels is minimized (and, of course, the milking machines are not overutilized). At least one legal assignment is possible for all input data sets. Cows can traverse several paths on the way to their milking machine.
+输入
+* Line 1: A single line with three space-separated integers: K, C, and M.
+
+* Lines 2.. ...: Each of these K+C lines of K+C space-separated integers describes the distances between pairs of various entities. The input forms a symmetric matrix. Line 2 tells the distances from milking machine 1 to each of the other entities; line 3 tells the distances from machine 2 to each of the other entities, and so on. Distances of entities directly connected by a path are positive integers no larger than 200. Entities not directly connected by a path have a distance of 0. The distance from an entity to itself (i.e., all numbers on the diagonal) is also given as 0. To keep the input lines of reasonable length, when K+C > 15, a row is broken into successive lines of 15 numbers and a potentially shorter line to finish up a row. Each new row begins on its own line.
+输出
+A single line with a single integer that is the minimum possible total distance for the furthest walking cow.
+样例输入
+2 3 2
+0 3 2 1 1
+3 0 3 2 0
+2 3 0 1 0
+1 2 1 0 2
+1 0 0 2 0
+样例输出
+2
+来源
+USACO 2003 U S Open
+
+Answer：
+// 还是直接用郭老师的模板做的，竟然没出一点bug，说明模板强大以及题目没有太复杂。
+
+#include <iostream>
+#include <stack>
+#include <map>
+#include <list>
+#include <set>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <string.h>
+#include <string>
+#include <cstring>
+using namespace std;
+
+#define inf 0x3f3f3f3f
+#define maxn 240
+#define maxm 10010
+int G[maxn][maxn];
+bool Visited[maxn];
+int Layer[maxn]; //Layer[i]是节点i的层号
+int n, mt, p;	//0是源点， mt是汇点
+
+int K, C, M;
+int d[240][240] = {0}, z[240][240] = {0};
+
+void init_graph(int ans){
+	memset(G, 0, sizeof(G));
+	memset(Visited, 0, sizeof(Visited));
+	//memset(Layer, 0, sizeof(Layer));
+
+	mt = K + C + 1;
+	for (int i = K + 1; i <= K + C; i++)
+		G[0][i] = 1;
+	for (int i = 1; i <= K; i++)
+		G[i][mt] = M;
+	for (int i = K + 1; i <= K + C; i++)
+		for (int j = 1; j <= K; j++){
+			if (d[i][j] <= ans){
+				G[i][j] = inf;
+			}
+		}
+}
+bool CountLayer(){ //分层
+	int layer = 0;
+	deque<int> q;
+	memset(Layer, 0xff, sizeof(Layer)); //都初始化成-1
+	Layer[0] = 0;
+	q.push_back(0);
+	while (!q.empty())
+	{
+		int v = q.front();
+		q.pop_front();
+		for (int j = 0; j <= mt; j++)
+		{
+			if (G[v][j] > 0 && Layer[j] == -1)
+			{
+				//Layer[j] == -1 说明j还没有访问过
+				Layer[j] = Layer[v] + 1;
+				if (j == mt)
+					return true; //分层到汇点即可
+				else
+					q.push_back(j);
+			}
+		}
+	}
+	return false;
+}
+
+int Dinic(){
+	int i;
+	int s;
+	int nMaxFlow = 0;
+	deque<int> q; //DFS用的栈
+	while (CountLayer())
+	{					//只要能分层
+		q.push_back(0); //源点入栈
+		memset(Visited, 0, sizeof(Visited));
+		Visited[0] = 1;
+		while (!q.empty())
+		{
+			int nd = q.back();
+			if (nd == mt)
+			{ // nd是汇点
+				//在栈中找容量最小边
+				int nMinC = inf;
+				int nMinC_vs; //容量最小边的起点
+				for (i = 1; i < q.size(); i++)
+				{
+					int vs = q[i - 1];
+					int ve = q[i];
+					if (G[vs][ve] > 0)
+					{
+						if (nMinC > G[vs][ve])
+						{
+							nMinC = G[vs][ve];
+							nMinC_vs = vs;
+						}
+					}
+				}
+				//增广，改图
+				nMaxFlow += nMinC;
+				for (i = 1; i < q.size(); i++)
+				{
+					int vs = q[i - 1];
+					int ve = q[i];
+					G[vs][ve] -= nMinC; //修改边容量
+					G[ve][vs] += nMinC; //添加反向边
+				}
+				//退栈到 nMinC_vs成为栈顶，以便继续dfs
+				while (!q.empty() && q.back() != nMinC_vs)
+				{
+					Visited[q.back()] = 0;
+					q.pop_back();
+				}
+			}
+			else
+			{ //nd不是汇点
+				for (i = 0; i <= mt; i++)
+				{
+					if (G[nd][i] > 0 && Layer[i] == Layer[nd] + 1 &&
+						!Visited[i])
+					{
+						//只往下一层的没有走过的节点走
+						Visited[i] = 1;
+						q.push_back(i);
+						break;
+					}
+				}
+
+				if (i > mt)		  //找不到下一个点
+					q.pop_back(); //回溯
+			}
+		}
+	}
+	return nMaxFlow;
+}
+
+bool tryit(int ans){
+	init_graph(ans);
+	int res = Dinic();
+	if(res == C)
+		return true;
+	return false;
+}
+
+void floyd(){
+	for (int k = 1; k <= K + C; k++)
+		for (int i = 1; i <= K + C; i++)
+			for (int j = 1; j <= K + C; j++)
+				d[i][j] = min(d[i][j], d[i][k] + d[k][j]);
+}
+
+int main()
+{
+	scanf("%d%d%d", &K, &C, &M);
+	for (int i = 1; i <= K + C; i++){
+		for (int j = 1; j <= K + C; j++){
+			scanf("%d", &z[i][j]);
+			if (i != j && !z[i][j])
+				z[i][j] = inf;
+			d[i][j] = z[i][j];
+		}
+	}
+	floyd();
+	int l = 0, r = inf, ans = 0;
+	while (l <= r){
+		int mid = (l + r) / 2;
+		if(tryit(mid)){
+			ans = mid;
+			r = mid - 1;
+		}
+		else
+			l = mid + 1;
+	}
+	printf("%d\n", ans);
+
+	system("pause");
+	return 0;
+}
