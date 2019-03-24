@@ -1,7 +1,8 @@
 ## DaPractice
    *Data structures and algorithms Practice* of EECS， 2018 winter
    
-   Assignments of openjudge problems.
+   Assignments of openjudge problems. Problems can be seen [here](http://dapractise.openjudge.cn/)
+
    
    *Updated:*
    
